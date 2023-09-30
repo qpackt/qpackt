@@ -17,6 +17,21 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-fn main() {
-    println!("Hello, world!");
+use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
+    start_http().await
+}
+
+async fn start_http() -> std::io::Result<()> {
+    HttpServer::new(|| App::new().default_service(web::to(default)))
+        .bind(("0.0.0.0", 8080))?
+        .run()
+        .await
+}
+
+async fn default(request: HttpRequest) -> impl Responder {
+    println!("req: {:?}", request.headers());
+    "OK"
 }
