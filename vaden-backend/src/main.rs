@@ -19,21 +19,34 @@
 
 use actix_files::Files;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use std::future;
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
-    start_http().await
+async fn main() {
+    start_http().await;
+    future::pending::<()>().await;
 }
 
-async fn start_http() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
-            .default_service(web::to(default))
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+async fn start_http() {
+    tokio::spawn(
+        HttpServer::new(|| {
+            App::new()
+                .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
+                .default_service(web::to(default))
+        })
+        .bind(("0.0.0.0", 8081))
+        .unwrap()
+        .run(),
+    );
+
+    println!("started 1");
+    tokio::spawn(
+        HttpServer::new(|| App::new().default_service(web::to(default)))
+            .bind(("0.0.0.0", 8080))
+            .unwrap()
+            .run(),
+    );
+    println!("started 2");
 }
 
 async fn default(request: HttpRequest) -> impl Responder {
