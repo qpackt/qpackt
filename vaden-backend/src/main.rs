@@ -17,6 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use actix_files::Files;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 
 #[tokio::main]
@@ -25,10 +26,14 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn start_http() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().default_service(web::to(default)))
-        .bind(("0.0.0.0", 8080))?
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
+            .default_service(web::to(default))
+    })
+    .bind(("0.0.0.0", 8080))?
+    .run()
+    .await
 }
 
 async fn default(request: HttpRequest) -> impl Responder {
