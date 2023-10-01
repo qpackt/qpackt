@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 /*
-   Primeclue: Machine Learning and Data Mining
-   Copyright (C) 2020 Łukasz Wojtów
+   Vaden: Versioned Application Deployment Engine
+   Copyright (C) 2023 Łukasz Wojtów
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU Affero General Public License as
