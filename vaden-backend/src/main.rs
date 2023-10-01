@@ -19,6 +19,7 @@
 
 mod config;
 mod error;
+mod password;
 
 use crate::config::Config;
 use actix_files::Files;
@@ -29,7 +30,9 @@ use std::future;
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
-    if let Some(_config_path) = args.get(1) {
+    if let Some(config_path) = args.get(1) {
+        let config = Config::read(config_path).await.unwrap();
+        println!("config: {:?}", config);
         start_http().await;
         future::pending::<()>().await;
     } else {

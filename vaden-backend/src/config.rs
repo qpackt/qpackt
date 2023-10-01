@@ -1,9 +1,20 @@
 use crate::error::{Result, VadenError};
+use crate::password::hash_password;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use tokio::fs;
+use yaml_rust::{Yaml, YamlLoader};
+
+const DOMAIN: &str = "domain";
+const HTTP_PROXY: &str = "http_proxy";
+const HTTPS_PROXY: &str = "https_proxy";
+const CERT: &str = "cert";
+const USERNAME: &str = "username";
+const PASSWORD: &str = "password";
+const ADMIN: &str = "admin";
 
 /// Main Vaden config.
+#[derive(Debug)]
 pub struct Config {
     /// Domain for which traffic should be accepted. Needed to request SSL certificate.
     domain: String,
@@ -32,34 +43,59 @@ impl Config {
         let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
         Ok(Config {
             domain,
-
             http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
             https_proxy: if_empty_then(https_proxy, "0.0.0.0:8443"),
             cert: cert.into(),
             username: if_empty_then(username, "admin"),
-            password,
+            password: hash_password(password)?,
             admin: if_empty_then(admin, "0.0.0.0:8444"),
         })
     }
 
     pub async fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let mut config = String::with_capacity(1024);
-        write!(&mut config, "domain: {}\r\n", self.domain)?;
-        write!(&mut config, "http_proxy: {}\r\n", self.http_proxy)?;
-        write!(&mut config, "https_proxy: {}\r\n", self.https_proxy)?;
+        write!(&mut config, "{}: {}\r\n", DOMAIN, self.domain)?;
+        write!(&mut config, "{}: {}\r\n", HTTP_PROXY, self.http_proxy)?;
+        write!(&mut config, "{}: {}\r\n", HTTPS_PROXY, self.https_proxy)?;
         write!(
             &mut config,
-            "cert: {}\r\n",
+            "{}: {}\r\n",
+            CERT,
             self.cert.to_str().ok_or(VadenError::InvalidConfig(
                 "Invalid certificate path".to_string()
             ))?
         )?;
-        write!(&mut config, "username: {}\r\n", self.username)?;
-        write!(&mut config, "password: {}\r\n", self.password)?;
-        write!(&mut config, "admin: {}\r\n", self.admin)?;
+        write!(&mut config, "{}: {}\r\n", USERNAME, self.username)?;
+        write!(&mut config, "{}: {}\r\n", PASSWORD, self.password)?;
+        write!(&mut config, "{}: {}\r\n", ADMIN, self.admin)?;
         fs::write(path, config).await?;
         Ok(())
     }
+
+    pub async fn read(path: impl AsRef<Path>) -> Result<Self> {
+        let content = fs::read_to_string(path).await?;
+        let yaml = &YamlLoader::load_from_str(&content)?[0];
+        println!("{:?}", yaml);
+        Ok(Self {
+            domain: from_yaml(DOMAIN, yaml)?,
+            http_proxy: from_yaml(HTTP_PROXY, yaml)?,
+            https_proxy: from_yaml(HTTPS_PROXY, yaml)?,
+            cert: from_yaml(CERT, yaml)?.into(),
+            username: from_yaml(USERNAME, yaml)?,
+            password: from_yaml(PASSWORD, yaml)?,
+            admin: from_yaml(ADMIN, yaml)?,
+        })
+    }
+}
+
+fn from_yaml(value: &str, yaml: &Yaml) -> Result<String> {
+    Ok(yaml[value]
+        .as_str()
+        .ok_or(VadenError::InvalidConfig(format!(
+            "Missing config value `{}`",
+            value
+        )))?
+        .to_string())
 }
 
 fn read_stdin(prompt: &str) -> Result<String> {
