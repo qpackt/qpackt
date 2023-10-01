@@ -17,14 +17,27 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+mod config;
+mod error;
+
+use crate::config::Config;
 use actix_files::Files;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use std::env;
 use std::future;
 
 #[tokio::main]
 async fn main() {
-    start_http().await;
-    future::pending::<()>().await;
+    let args: Vec<String> = env::args().collect();
+    if let Some(_config_path) = args.get(1) {
+        start_http().await;
+        future::pending::<()>().await;
+    } else {
+        let config = Config::new().unwrap();
+        let path = "vaden.yaml";
+        config.save(path).await.unwrap();
+        println!("Config file saved in {}", path);
+    }
 }
 
 async fn start_http() {
