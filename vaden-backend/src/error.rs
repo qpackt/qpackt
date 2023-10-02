@@ -20,10 +20,10 @@
 use std::io;
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, VadenError>;
+pub(crate) type Result<T> = std::result::Result<T, VadenError>;
 
 #[derive(Debug, Error)]
-pub enum VadenError {
+pub(crate) enum VadenError {
     #[error("invalid config {0}")]
     InvalidConfig(String),
 

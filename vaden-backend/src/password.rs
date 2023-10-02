@@ -24,7 +24,7 @@ use scrypt::{
     Scrypt,
 };
 
-pub fn hash_password(password: String) -> Result<String> {
+pub(crate) fn hash_password(password: String) -> Result<String> {
     println!("Hashing password...");
     let salt = SaltString::generate(&mut OsRng);
     let hash = Scrypt

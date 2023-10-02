@@ -34,7 +34,7 @@ const ADMIN: &str = "admin";
 
 /// Main Vaden config.
 #[derive(Debug)]
-pub struct Config {
+pub(crate) struct Config {
     /// Domain for which traffic should be accepted. Needed to request SSL certificate.
     domain: String,
     /// Host and port for HTTP (not SSL) traffic
@@ -52,7 +52,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Config> {
+    pub(crate) fn new() -> Result<Config> {
         let domain = read_stdin("Domain")?;
         let http_proxy = read_stdin("Ip/port for HTTP traffic (default 0.0.0.0:8080)")?;
         let https_proxy = read_stdin("Ip/port for HTTPS traffic (default 0.0.0.0:8443)")?;
@@ -71,7 +71,7 @@ impl Config {
         })
     }
 
-    pub async fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+    pub(crate) async fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let mut config = String::with_capacity(1024);
         write!(&mut config, "{}: {}\r\n", DOMAIN, self.domain)?;
         write!(&mut config, "{}: {}\r\n", HTTP_PROXY, self.http_proxy)?;
@@ -91,7 +91,7 @@ impl Config {
         Ok(())
     }
 
-    pub async fn read(path: impl AsRef<Path>) -> Result<Self> {
+    pub(crate) async fn read(path: impl AsRef<Path>) -> Result<Self> {
         let content = fs::read_to_string(path).await?;
         let yaml = &YamlLoader::load_from_str(&content)?[0];
         println!("{:?}", yaml);
