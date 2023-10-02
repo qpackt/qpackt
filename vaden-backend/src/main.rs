@@ -20,16 +20,14 @@
 mod config;
 mod error;
 mod password;
+pub mod proxy;
 
 use crate::config::Config;
+use crate::proxy::handler::proxy_handler;
 use actix_files::Files;
-use actix_web::web::Payload;
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use awc::Client;
+use actix_web::{web, App, HttpServer};
 use std::env;
 use std::future;
-use std::str::FromStr;
-use url::Url;
 
 #[tokio::main]
 async fn main() {
@@ -60,31 +58,10 @@ async fn start_http() {
 
     println!("started 1");
     tokio::spawn(
-        HttpServer::new(|| App::new().default_service(web::to(proxy)))
+        HttpServer::new(|| App::new().default_service(web::to(proxy_handler)))
             .bind(("0.0.0.0", 8080))
             .unwrap()
             .run(),
     );
     println!("started 2");
-}
-
-async fn proxy(payload: Payload, client_request: HttpRequest) -> HttpResponse {
-    let mut destination = Url::from_str("http://localhost:1111").unwrap();
-    destination.set_path(client_request.uri().path());
-    destination.set_query(client_request.uri().query());
-
-    let client = Client::default();
-    let proxy_request = client
-        .request_from(destination.as_str(), client_request.head())
-        .no_decompress();
-    let upstream_response = proxy_request.send_stream(payload).await.unwrap();
-    let mut proxy_response = HttpResponse::build(upstream_response.status());
-    for (header_name, header_value) in upstream_response
-        .headers()
-        .iter()
-        .filter(|(h, _)| *h != "connection")
-    {
-        proxy_response.insert_header((header_name.clone(), header_value.clone()));
-    }
-    proxy_response.streaming(upstream_response)
 }
