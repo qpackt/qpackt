@@ -17,14 +17,18 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use actix_web::web::Payload;
+use crate::proxy::upstream::Upstream;
+use actix_web::web::{Data, Payload};
 use actix_web::{HttpRequest, HttpResponse};
 use awc::Client;
-use std::str::FromStr;
-use url::Url;
+use tokio::sync::RwLock;
 
-pub async fn proxy_handler(payload: Payload, client_request: HttpRequest) -> HttpResponse {
-    let mut destination = Url::from_str("http://localhost:1111").unwrap();
+pub(crate) async fn proxy_handler(
+    payload: Payload,
+    client_request: HttpRequest,
+    upstreams: Data<RwLock<Vec<Upstream>>>,
+) -> HttpResponse {
+    let mut destination = upstreams.read().await[0].url().clone();
     destination.set_path(client_request.uri().path());
     destination.set_query(client_request.uri().query());
 

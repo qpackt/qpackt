@@ -17,5 +17,18 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-pub mod handler;
-pub mod upstream;
+use url::Url;
+
+/// Represents a single upstream server to do proxy to.
+pub(crate) struct Upstream {
+    url: Url,
+}
+
+impl Upstream {
+    pub(crate) fn new(url: Url) -> Self {
+        Self { url }
+    }
+    pub(crate) fn url(&self) -> &Url {
+        &self.url
+    }
+}

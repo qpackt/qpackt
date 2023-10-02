@@ -5,8 +5,6 @@ edition = "2021"
 authors = ["Łukasz Wojtów <lukasz.wojtow@gmail.com>"]
 license = "AGPL-3.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 actix-files = "0.6"
 actix-web = "4"
