@@ -17,6 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use tokio::sync::RwLock;
 use url::Url;
 
 /// Represents a single upstream server to do proxy to.
@@ -25,10 +26,25 @@ pub(crate) struct Upstream {
 }
 
 impl Upstream {
+    #[allow(dead_code)] // TODO remove
     pub(crate) fn new(url: Url) -> Self {
         Self { url }
     }
+
+    #[allow(dead_code)] // TODO remove
     pub(crate) fn url(&self) -> &Url {
         &self.url
+    }
+}
+
+/// Encapsulation for multiple [Upstream]
+#[derive(Default)]
+pub(crate) struct Upstreams {
+    upstreams: RwLock<Vec<Upstream>>,
+}
+
+impl Upstreams {
+    pub(crate) async fn get_any_url(&self) -> Url {
+        self.upstreams.read().await[0].url.clone()
     }
 }

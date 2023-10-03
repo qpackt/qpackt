@@ -39,15 +39,12 @@ pub mod proxy;
 
 use crate::config::Config;
 use crate::proxy::handler::proxy_handler;
-use crate::proxy::upstream::Upstream;
+use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use std::env;
 use std::future;
-use std::str::FromStr;
-use tokio::sync::RwLock;
-use url::Url;
 
 #[tokio::main]
 async fn main() {
@@ -66,9 +63,7 @@ async fn main() {
 }
 
 async fn start_http() {
-    let upstreams: Data<RwLock<Vec<Upstream>>> = Data::new(RwLock::new(vec![Upstream::new(
-        Url::from_str("localhost:1111").unwrap(),
-    )]));
+    let upstreams = Data::new(Upstreams::default());
 
     tokio::spawn(
         HttpServer::new(move || {
