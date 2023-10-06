@@ -1,0 +1,22 @@
+# Example config file to pass to vaden
+
+# Domain for which should do proxy
+domain: some_domain.com
+
+# Where proxy should be run (http traffic). This should be accessible from the internet.
+http_proxy: 0.0.0.0:8080
+
+# Where proxy should be run (https traffic). This should be accessible from the internet.
+https_proxy: 0.0.0.0:8443
+
+# Path to certificate. It may not exist yet when vaden is started the first time. Must be writeable by vaden user.
+cert: /etc/cert.pem
+
+# Username for vaden administrator
+username: admin
+
+# Administrator's password (as scrypt)
+password: $scrypt$ln=17,r=8,p=1$E+P81SrW+h6XIUvJI4cpOQ$9mAhBWqFPk5i4OVE/+DvOzUrbttn9gLQMMcUdIY1BmQ
+
+# Ip/port where Administrator's panel should bind. This does not need to be accessible from the internet.
+admin: 0.0.0.0:8444

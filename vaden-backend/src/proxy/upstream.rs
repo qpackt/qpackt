@@ -45,6 +45,16 @@ pub(crate) struct Upstreams {
 
 impl Upstreams {
     pub(crate) async fn get_any_url(&self) -> Url {
-        self.upstreams.read().await[0].url.clone()
+        if let Ok(url) = std::env::var("UPSTREAM") {
+            println!("proxying to {}", url);
+            match Url::parse(&url) {
+                Ok(url) => url,
+                Err(e) => {
+                    panic!("Unable to parse env upstream: {:?}", e);
+                }
+            }
+        } else {
+            self.upstreams.read().await[0].url.clone()
+        }
     }
 }

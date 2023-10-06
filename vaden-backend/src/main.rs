@@ -43,8 +43,7 @@ use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
-use std::env;
-use std::future;
+use std::{env, future};
 
 #[tokio::main]
 async fn main() {
@@ -63,25 +62,29 @@ async fn main() {
 }
 
 async fn start_http() {
-    let upstreams = Data::new(Upstreams::default());
+    let upstreams1 = Data::new(Upstreams::default());
 
+    let upstreams2 = upstreams1.clone();
+    env::set_var("RUST_LOG", "debug");
     tokio::spawn(
         HttpServer::new(move || {
             App::new()
-                .app_data(upstreams.clone())
+                .app_data(upstreams1.clone())
                 .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
         })
         .bind(("0.0.0.0", 8081))
         .unwrap()
         .run(),
     );
-
-    println!("started 1");
+    env_logger::init();
     tokio::spawn(
-        HttpServer::new(|| App::new().default_service(web::to(proxy_handler)))
-            .bind(("0.0.0.0", 8080))
-            .unwrap()
-            .run(),
+        HttpServer::new(move || {
+            App::new()
+                .app_data(upstreams2.clone())
+                .default_service(web::to(proxy_handler))
+        })
+        .bind(("0.0.0.0", 8080))
+        .unwrap()
+        .run(),
     );
-    println!("started 2");
 }
