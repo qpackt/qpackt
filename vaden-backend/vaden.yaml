@@ -20,3 +20,6 @@ password: $scrypt$ln=17,r=8,p=1$E+P81SrW+h6XIUvJI4cpOQ$9mAhBWqFPk5i4OVE/+DvOzUrb
 
 # Ip/port where Administrator's panel should bind. This does not need to be accessible from the internet.
 admin: 0.0.0.0:8444
+
+# Run directory to hold databases, docker images etc...
+run_directory: /var/run/vaden

@@ -31,6 +31,7 @@ const CERT: &str = "cert";
 const USERNAME: &str = "username";
 const PASSWORD: &str = "password";
 const ADMIN: &str = "admin";
+const RUN_DIR: &str = "run_directory";
 
 /// Main Vaden config.
 #[derive(Debug)]
@@ -49,6 +50,8 @@ pub(crate) struct Config {
     password: String,
     /// Host and port for administrator's panel.
     admin: String,
+    /// Directory to hold database, docker images etc...
+    run_directory: PathBuf,
 }
 
 impl Config {
@@ -60,6 +63,7 @@ impl Config {
         let username = read_stdin("Administrator's username (default 'admin')")?;
         let password = read_stdin("Administrator's password")?;
         let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
+        let run_directory = read_stdin("Run directory (default /var/run/vaden)")?;
         Ok(Config {
             domain,
             http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
@@ -68,6 +72,7 @@ impl Config {
             username: if_empty_then(username, "admin"),
             password: hash_password(password)?,
             admin: if_empty_then(admin, "0.0.0.0:8444"),
+            run_directory: if_empty_then(run_directory, "/var/run/vaden").into(),
         })
     }
 
@@ -87,6 +92,16 @@ impl Config {
         write!(&mut config, "{}: {}\r\n", USERNAME, self.username)?;
         write!(&mut config, "{}: {}\r\n", PASSWORD, self.password)?;
         write!(&mut config, "{}: {}\r\n", ADMIN, self.admin)?;
+        write!(
+            &mut config,
+            "{}: {}\r\n",
+            RUN_DIR,
+            self.run_directory
+                .to_str()
+                .ok_or(VadenError::InvalidConfig(
+                    "Invalid run directory".to_string()
+                ))?
+        )?;
         fs::write(path, config).await?;
         Ok(())
     }
@@ -103,6 +118,7 @@ impl Config {
             username: from_yaml(USERNAME, yaml)?,
             password: from_yaml(PASSWORD, yaml)?,
             admin: from_yaml(ADMIN, yaml)?,
+            run_directory: from_yaml(RUN_DIR, yaml)?.into(),
         })
     }
 }
