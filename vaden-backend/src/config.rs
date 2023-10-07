@@ -109,7 +109,6 @@ impl Config {
     pub(crate) async fn read(path: impl AsRef<Path>) -> Result<Self> {
         let content = fs::read_to_string(path).await?;
         let yaml = &YamlLoader::load_from_str(&content)?[0];
-        println!("{:?}", yaml);
         Ok(Self {
             domain: from_yaml(DOMAIN, yaml)?,
             http_proxy: from_yaml(HTTP_PROXY, yaml)?,
@@ -120,6 +119,10 @@ impl Config {
             admin: from_yaml(ADMIN, yaml)?,
             run_directory: from_yaml(RUN_DIR, yaml)?.into(),
         })
+    }
+
+    pub(crate) fn app_run_directory(&self) -> &PathBuf {
+        &self.run_directory
     }
 }
 

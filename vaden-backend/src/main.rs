@@ -33,11 +33,13 @@
     variant_size_differences
 )]
 mod config;
+pub mod dao;
 mod error;
 mod password;
 pub mod proxy;
 
 use crate::config::Config;
+use crate::dao::Dao;
 use crate::proxy::handler::proxy_handler;
 use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
@@ -50,7 +52,7 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
-        println!("config: {:?}", config);
+        Dao::init(config.app_run_directory()).await.unwrap();
         start_http().await;
         future::pending::<()>().await;
     } else {

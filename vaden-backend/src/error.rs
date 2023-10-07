@@ -42,4 +42,7 @@ pub(crate) enum VadenError {
     #[allow(dead_code)] // TODO remove
     #[error("unable to proxy request")]
     ProxyError,
+
+    #[error("unable to access database {0}")]
+    DatabaseError(String),
 }

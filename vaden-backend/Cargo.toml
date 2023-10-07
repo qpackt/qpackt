@@ -12,6 +12,7 @@ awc = "3"
 env_logger = "0.10"
 futures-util = "0.3"
 scrypt = "0.11"
+sqlx = {version = "0.7", features = ["runtime-tokio-rustls", "sqlite"]}
 thiserror = "1"
 tokio = {version = "1", features = ["full"]}
 url = "2"
