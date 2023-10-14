@@ -25,7 +25,7 @@ export const state = reactive({
   },
 });
 
-export function increase() {
+export async function increase() {
     state.hello_world.count += 1
     console.log('increased to ' + state.hello_world.count)
 } 

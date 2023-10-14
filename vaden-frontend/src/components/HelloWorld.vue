@@ -36,7 +36,7 @@ export default {
   },
 
   methods: {
-    increase
+    increase,
   }
 }
 </script>
