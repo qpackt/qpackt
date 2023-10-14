@@ -1,20 +1,7 @@
-<h1>Installing from source</h1>
+# Vue 3 + Vite
 
-```bash
-rustup target add wasm32-unknown-unknown
-```
+This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
 
-Install trunk
-```bash
-cargo install --locked trunk
-```
+## Recommended IDE Setup
 
-To run:
-```bash
-trunk serve
-```
-
-To build for deployment:
-```bash
-trunk build --release --public-url "/vaden"
-```
+- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
