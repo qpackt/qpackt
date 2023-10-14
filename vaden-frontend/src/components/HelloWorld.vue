@@ -1,13 +1,11 @@
-
 <template>
   <div>
-    <button type="button" @click="inc">count is {{ count }}</button>
+    <button type="button" @click="increase">count is {{ count }}</button>
   </div>
 </template>
 
 
 <script>
-import { ref } from 'vue'
 import { state } from '../state.js'
 import { increase } from '../state.js'
 
@@ -20,9 +18,7 @@ export default {
   },
 
   methods: {
-    inc() {
-      increase()
-    }
+    increase
   }
 }
 </script>
