@@ -38,66 +38,49 @@ mod error;
 mod password;
 pub mod proxy;
 
+mod http;
+
 use crate::config::Config;
 use crate::dao::Dao;
-use crate::proxy::handler::proxy_handler;
-use crate::proxy::upstream::Upstreams;
-use actix_files::Files;
-use actix_web::web::Data;
-use actix_web::{web, App, HttpServer};
+
+use crate::http::start_http;
 use log::info;
 use std::env;
 use std::time::Duration;
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
+    env::set_var("RUST_LOG", "debug");
+    env_logger::init();
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
         Dao::init(config.app_run_directory()).await.unwrap();
-        start_http().await;
+        let (panel_handle, proxy_handle) = start_http().await;
+        wait(panel_handle, proxy_handle).await;
     } else {
-        let config = Config::new().unwrap();
-        let path = "vaden.yaml";
-        config.save(path).await.unwrap();
-        println!("Config file saved in {}", path);
+        Config::create().await;
     }
 }
 
-async fn start_http() {
-    let upstreams1 = Data::new(Upstreams::default());
-    let upstreams2 = upstreams1.clone();
-    env::set_var("RUST_LOG", "debug");
-    env_logger::init();
-    let panel_handle = tokio::spawn(
-        HttpServer::new(move || {
-            App::new()
-                .app_data(upstreams1.clone())
-                .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
-        })
-        .bind(("0.0.0.0", 8081))
-        .unwrap()
-        .run(),
-    );
+async fn wait(
+    panel_handle: JoinHandle<std::io::Result<()>>,
+    proxy_handle: JoinHandle<std::io::Result<()>>,
+) -> ! {
+    let mut signal_interrupt = signal(SignalKind::interrupt()).unwrap();
+    let mut signal_terminate = signal(SignalKind::terminate()).unwrap();
 
-    let proxy_handle = tokio::spawn(
-        HttpServer::new(move || {
-            App::new()
-                .app_data(upstreams2.clone())
-                .default_service(web::to(proxy_handler))
-        })
-        .bind(("0.0.0.0", 8080))
-        .unwrap()
-        .run(),
-    );
-    let mut signal = signal(SignalKind::interrupt()).unwrap();
     select! {
-        _ = signal.recv() => {
+        _ = signal_interrupt.recv() => {
             info!("received SIGINT, exiting...");
             tokio::time::sleep(Duration::from_millis(100)).await;
-            std::process::exit(0);
+        },
+        _ = signal_terminate.recv() => {
+            info!("received SIGTERM, exiting...");
+            tokio::time::sleep(Duration::from_millis(100)).await;
         },
         _ = proxy_handle => {
             println!("Proxy exited");
@@ -106,4 +89,5 @@ async fn start_http() {
             println!("Panel exited");
         }
     }
+    std::process::exit(0);
 }

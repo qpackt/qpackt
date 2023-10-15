@@ -76,6 +76,13 @@ impl Config {
         })
     }
 
+    pub(super) async fn create() {
+        let config = Config::new().unwrap();
+        let path = "vaden.yaml";
+        config.save(path).await.unwrap();
+        println!("Config file saved in {}", path);
+    }
+
     pub(crate) async fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let mut config = String::with_capacity(1024);
         write!(&mut config, "{}: {}\r\n", DOMAIN, self.domain)?;
