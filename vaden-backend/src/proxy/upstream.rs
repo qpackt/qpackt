@@ -44,6 +44,7 @@ pub(crate) struct Upstreams {
 }
 
 impl Upstreams {
+    /// Convenience function to use in test. TODO: refactor test such that it's not needed.
     pub(crate) async fn get_any_url(&self) -> Url {
         if let Ok(url) = std::env::var("UPSTREAM") {
             println!("proxying to {}", url);

@@ -24,6 +24,7 @@ use actix_web::{HttpRequest, HttpResponse};
 use awc::{Client, ClientRequest};
 use url::Url;
 
+/// Basic proxy handler (method agnostic).
 pub(crate) async fn proxy_handler(
     payload: Payload,
     client_request: HttpRequest,

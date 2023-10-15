@@ -25,6 +25,8 @@ use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use tokio::task::JoinHandle;
 
+/// Starts two actix processes to serve admin's panel and http proxy.
+/// Returns two join handles so later then can be awaited.
 pub(super) async fn start_http(
     config: &Config,
 ) -> (

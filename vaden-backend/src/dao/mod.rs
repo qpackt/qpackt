@@ -5,8 +5,10 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
+/// Default file name with main vaden's database.
 const SQLITE_FILE: &str = "vaden.sqlite";
 
+/// DAO to encapsulate reading/writing from/to a database.
 #[derive(Clone)]
 pub(crate) struct Dao {
     inner: Arc<DaoInner>,
@@ -37,6 +39,7 @@ impl Dao {
             .map_err(|e| VadenError::DatabaseError(e.to_string()))
     }
 
+    /// Called on startup to ensure that sqlite file exists and all migrations are applied.
     async fn ensure_sqlite_initialized(&self) -> Result<()> {
         let mut conn = self.get_sqlite_connection().await?;
         sqlx::migrate!("db/migrations")

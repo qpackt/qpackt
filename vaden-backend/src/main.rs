@@ -66,6 +66,11 @@ async fn main() {
     }
 }
 
+/// Waits on things like http servers and signals.
+/// This function should never exit, when waiting is done that
+/// means either there was some problem with one of http server
+/// or some signal was received.
+/// SIGHUP is not supported at this time.
 async fn wait(
     panel_handle: JoinHandle<std::io::Result<()>>,
     proxy_handle: JoinHandle<std::io::Result<()>>,

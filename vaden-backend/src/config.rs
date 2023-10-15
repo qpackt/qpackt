@@ -55,27 +55,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn new() -> Result<Config> {
-        let domain = read_stdin("Domain")?;
-        let http_proxy = read_stdin("Ip/port for HTTP traffic (default 0.0.0.0:8080)")?;
-        let https_proxy = read_stdin("Ip/port for HTTPS traffic (default 0.0.0.0:8443)")?;
-        let cert = read_stdin("Path to SSL certificate file (may not exist yet)")?;
-        let username = read_stdin("Administrator's username (default 'admin')")?;
-        let password = read_stdin("Administrator's password")?;
-        let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
-        let run_directory = read_stdin("Run directory (default /var/run/vaden)")?;
-        Ok(Config {
-            domain,
-            http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
-            https_proxy: if_empty_then(https_proxy, "0.0.0.0:8443"),
-            cert: cert.into(),
-            username: if_empty_then(username, "admin"),
-            password: hash_password(password)?,
-            admin_panel: if_empty_then(admin, "0.0.0.0:8444"),
-            run_directory: if_empty_then(run_directory, "/var/run/vaden").into(),
-        })
-    }
-
+    /// Creates config by asking questions via stdin/out.
     pub(super) async fn create() {
         let config = Config::new().unwrap();
         let path = "vaden.yaml";
@@ -83,6 +63,7 @@ impl Config {
         println!("Config file saved in {}", path);
     }
 
+    /// Saves config to the given file.
     pub(crate) async fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let mut config = String::with_capacity(1024);
         write!(&mut config, "{}: {}\r\n", DOMAIN, self.domain)?;
@@ -113,6 +94,7 @@ impl Config {
         Ok(())
     }
 
+    /// Read config from a file.
     pub(crate) async fn read(path: impl AsRef<Path>) -> Result<Self> {
         let content = fs::read_to_string(path).await?;
         let yaml = &YamlLoader::load_from_str(&content)?[0];
@@ -138,6 +120,28 @@ impl Config {
 
     pub(crate) fn proxy_addr(&self) -> &str {
         &self.http_proxy
+    }
+
+    /// Builds new config from stdin questions with some sane defaults.
+    fn new() -> Result<Config> {
+        let domain = read_stdin("Domain")?;
+        let http_proxy = read_stdin("Ip/port for HTTP traffic (default 0.0.0.0:8080)")?;
+        let https_proxy = read_stdin("Ip/port for HTTPS traffic (default 0.0.0.0:8443)")?;
+        let cert = read_stdin("Path to SSL certificate file (may not exist yet)")?;
+        let username = read_stdin("Administrator's username (default 'admin')")?;
+        let password = read_stdin("Administrator's password")?;
+        let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
+        let run_directory = read_stdin("Run directory (default /var/run/vaden)")?;
+        Ok(Config {
+            domain,
+            http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
+            https_proxy: if_empty_then(https_proxy, "0.0.0.0:8443"),
+            cert: cert.into(),
+            username: if_empty_then(username, "admin"),
+            password: hash_password(password)?,
+            admin_panel: if_empty_then(admin, "0.0.0.0:8444"),
+            run_directory: if_empty_then(run_directory, "/var/run/vaden").into(),
+        })
     }
 }
 

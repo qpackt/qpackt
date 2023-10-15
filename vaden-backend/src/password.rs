@@ -30,6 +30,6 @@ pub(crate) fn hash_password(password: String) -> Result<String> {
     let hash = Scrypt
         .hash_password(password.as_bytes(), &salt)?
         .to_string();
-    println!("Done ashing");
+    println!("Done hashing");
     Ok(hash)
 }
