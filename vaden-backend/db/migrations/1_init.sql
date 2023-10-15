@@ -1,7 +1,6 @@
 CREATE TABLE versions (
     id INT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    path TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     created TIMESTAMP NOT NULL
 );
 
