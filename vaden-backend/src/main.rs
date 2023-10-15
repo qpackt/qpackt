@@ -45,7 +45,11 @@ use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
-use std::{env, future};
+use log::info;
+use std::env;
+use std::time::Duration;
+use tokio::select;
+use tokio::signal::unix::{signal, SignalKind};
 
 #[tokio::main]
 async fn main() {
@@ -54,7 +58,6 @@ async fn main() {
         let config = Config::read(config_path).await.unwrap();
         Dao::init(config.app_run_directory()).await.unwrap();
         start_http().await;
-        future::pending::<()>().await;
     } else {
         let config = Config::new().unwrap();
         let path = "vaden.yaml";
@@ -65,10 +68,10 @@ async fn main() {
 
 async fn start_http() {
     let upstreams1 = Data::new(Upstreams::default());
-
     let upstreams2 = upstreams1.clone();
     env::set_var("RUST_LOG", "debug");
-    tokio::spawn(
+    env_logger::init();
+    let panel_handle = tokio::spawn(
         HttpServer::new(move || {
             App::new()
                 .app_data(upstreams1.clone())
@@ -78,8 +81,8 @@ async fn start_http() {
         .unwrap()
         .run(),
     );
-    env_logger::init();
-    tokio::spawn(
+
+    let proxy_handle = tokio::spawn(
         HttpServer::new(move || {
             App::new()
                 .app_data(upstreams2.clone())
@@ -89,4 +92,18 @@ async fn start_http() {
         .unwrap()
         .run(),
     );
+    let mut signal = signal(SignalKind::interrupt()).unwrap();
+    select! {
+        _ = signal.recv() => {
+            info!("received SIGINT, exiting...");
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            std::process::exit(0);
+        },
+        _ = proxy_handle => {
+            println!("Proxy exited");
+        },
+        _ = panel_handle => {
+            println!("Panel exited");
+        }
+    }
 }

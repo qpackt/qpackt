@@ -2344,7 +2344,7 @@ dependencies = [
  "actix-web",
  "awc",
  "env_logger",
- "futures-util",
+ "log",
  "scrypt",
  "sqlx",
  "thiserror",
