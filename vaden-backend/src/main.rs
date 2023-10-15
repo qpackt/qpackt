@@ -59,7 +59,7 @@ async fn main() {
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
         Dao::init(config.app_run_directory()).await.unwrap();
-        let (panel_handle, proxy_handle) = start_http().await;
+        let (panel_handle, proxy_handle) = start_http(&config).await;
         wait(panel_handle, proxy_handle).await;
     } else {
         Config::create().await;

@@ -30,7 +30,7 @@ const HTTPS_PROXY: &str = "https_proxy";
 const CERT: &str = "cert";
 const USERNAME: &str = "username";
 const PASSWORD: &str = "password";
-const ADMIN: &str = "admin";
+const ADMIN_PANEL: &str = "admin_panel";
 const RUN_DIR: &str = "run_directory";
 
 /// Main Vaden config.
@@ -49,7 +49,7 @@ pub(crate) struct Config {
     /// Administrator's password encoded in `scrypt` format
     password: String,
     /// Host and port for administrator's panel.
-    admin: String,
+    admin_panel: String,
     /// Directory to hold database, docker images etc...
     run_directory: PathBuf,
 }
@@ -71,7 +71,7 @@ impl Config {
             cert: cert.into(),
             username: if_empty_then(username, "admin"),
             password: hash_password(password)?,
-            admin: if_empty_then(admin, "0.0.0.0:8444"),
+            admin_panel: if_empty_then(admin, "0.0.0.0:8444"),
             run_directory: if_empty_then(run_directory, "/var/run/vaden").into(),
         })
     }
@@ -98,7 +98,7 @@ impl Config {
         )?;
         write!(&mut config, "{}: {}\r\n", USERNAME, self.username)?;
         write!(&mut config, "{}: {}\r\n", PASSWORD, self.password)?;
-        write!(&mut config, "{}: {}\r\n", ADMIN, self.admin)?;
+        write!(&mut config, "{}: {}\r\n", ADMIN_PANEL, self.admin_panel)?;
         write!(
             &mut config,
             "{}: {}\r\n",
@@ -123,13 +123,21 @@ impl Config {
             cert: from_yaml(CERT, yaml)?.into(),
             username: from_yaml(USERNAME, yaml)?,
             password: from_yaml(PASSWORD, yaml)?,
-            admin: from_yaml(ADMIN, yaml)?,
+            admin_panel: from_yaml(ADMIN_PANEL, yaml)?,
             run_directory: from_yaml(RUN_DIR, yaml)?.into(),
         })
     }
 
     pub(crate) fn app_run_directory(&self) -> &PathBuf {
         &self.run_directory
+    }
+
+    pub(crate) fn panel_addr(&self) -> &str {
+        &self.admin_panel
+    }
+
+    pub(crate) fn proxy_addr(&self) -> &str {
+        &self.http_proxy
     }
 }
 

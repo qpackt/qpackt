@@ -3,6 +3,6 @@ http_proxy: 0.0.0.0:8080
 https_proxy: 0.0.0.0:8443
 cert: /tmp/cert.pem
 username: admin
-password: $scrypt$ln=17,r=8,p=1$hqygqG2s9Sy9l6B4VFHNUw$JEQQQ2uBnp8o9iqvWelmP8zBJPjxTzeKMur1/MApAUk
-admin: 0.0.0.0:8444
+password: $scrypt$ln=17,r=8,p=1$d+Agvxuz4U6WMbUOB7HZVQ$A/0Xy3B3zcl7RLS1wAOWlKJjaFwmMMNwbRCeW78itg8
+admin_panel: 0.0.0.0:8444
 run_directory: /tmp/vaden

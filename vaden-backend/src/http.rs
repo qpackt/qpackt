@@ -17,6 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use crate::config::Config;
 use crate::proxy::handler::proxy_handler;
 use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
@@ -24,39 +25,41 @@ use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use tokio::task::JoinHandle;
 
-pub(super) async fn start_http() -> (
+pub(super) async fn start_http(
+    config: &Config,
+) -> (
     JoinHandle<std::io::Result<()>>,
     JoinHandle<std::io::Result<()>>,
 ) {
     let upstreams = Data::new(Upstreams::default());
 
-    let panel_handle = start_panel_http(upstreams.clone());
-    let proxy_handle = start_proxy_http(upstreams);
+    let panel_handle = start_panel_http(upstreams.clone(), config.panel_addr());
+    let proxy_handle = start_proxy_http(upstreams, config.proxy_addr());
 
     (panel_handle, proxy_handle)
 }
 
-fn start_proxy_http(upstreams: Data<Upstreams>) -> JoinHandle<std::io::Result<()>> {
+fn start_proxy_http(upstreams: Data<Upstreams>, addr: &str) -> JoinHandle<std::io::Result<()>> {
     tokio::spawn(
         HttpServer::new(move || {
             App::new()
                 .app_data(upstreams.clone())
                 .default_service(web::to(proxy_handler))
         })
-        .bind(("0.0.0.0", 8080))
+        .bind(addr)
         .unwrap()
         .run(),
     )
 }
 
-fn start_panel_http(upstreams: Data<Upstreams>) -> JoinHandle<std::io::Result<()>> {
+fn start_panel_http(upstreams: Data<Upstreams>, addr: &str) -> JoinHandle<std::io::Result<()>> {
     tokio::spawn(
         HttpServer::new(move || {
             App::new()
                 .app_data(upstreams.clone())
                 .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
         })
-        .bind(("0.0.0.0", 8081))
+        .bind(addr)
         .unwrap()
         .run(),
     )
