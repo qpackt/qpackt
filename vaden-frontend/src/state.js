@@ -19,7 +19,7 @@
 
 import { reactive } from 'vue';
 
-export const state = reactive({
+const state = reactive({
   hello_world: {
     count: 0,
   },
@@ -27,5 +27,8 @@ export const state = reactive({
 
 export async function increase() {
     state.hello_world.count += 1
-    console.log('increased to ' + state.hello_world.count)
-} 
+}
+
+export function get_count() {
+    return state.hello_world.count
+}

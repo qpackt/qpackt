@@ -18,25 +18,17 @@
 
 <template>
   <div>
-    <button type="button" @click="increase">count is {{ count }}</button>
+    <button type="button" @click="increase">count is {{ get_count() }}</button>
   </div>
 </template>
 
 
 <script>
-import { state } from '../state.js'
-import { increase } from '../state.js'
-
+import { increase, get_count } from '../state.js'
 
 export default {
-  computed: {
-    count() {
-      return state.hello_world.count
-    }
-  },
-
   methods: {
-    increase,
+    increase, get_count
   }
 }
 </script>
