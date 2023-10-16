@@ -34,18 +34,18 @@ const ADMIN_PANEL: &str = "admin_panel";
 const RUN_DIR: &str = "run_directory";
 
 /// Main Vaden config.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Config {
     /// Domain for which traffic should be accepted. Needed to request SSL certificate.
     domain: String,
     /// Host and port for HTTP (not SSL) traffic
-    http_proxy: String,
+    http_proxy: String, // TODO change this to sockaddr or something.
     /// Host and port for HTTPS traffic
     https_proxy: String,
     /// Path to file with SSL certificate. Should be writable for vaden user.
     cert: PathBuf,
     /// Administrator's user name (for logging into admin panel)
-    username: String,
+    username: String, // TODO remove
     /// Administrator's password encoded in `scrypt` format
     password: String,
     /// Host and port for administrator's panel.

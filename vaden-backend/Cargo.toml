@@ -7,13 +7,17 @@ license = "AGPL-3.0"
 
 [dependencies]
 actix-files = "0.6"
+actix-multipart = "0.6"
 actix-web = "4"
 awc = "3"
 env_logger = "0.10"
+futures = "0.3"
 log = "0.4"
+rand = "0.8"
 scrypt = "0.11"
 sqlx = {version = "0.7", features = ["runtime-tokio-rustls", "sqlite"]}
 thiserror = "1"
 tokio = {version = "1", features = ["full"]}
 url = "2"
 yaml-rust = "0.4"
+zip = "0.6"

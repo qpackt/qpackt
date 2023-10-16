@@ -39,12 +39,13 @@ mod password;
 pub mod proxy;
 
 mod http;
+mod panel;
 
 use crate::config::Config;
 use crate::dao::Dao;
 
 use crate::http::start_http;
-use log::info;
+use log::{error, info};
 use std::env;
 use std::time::Duration;
 use tokio::select;
@@ -59,7 +60,7 @@ async fn main() {
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
         Dao::init(config.app_run_directory()).await.unwrap();
-        let (panel_handle, proxy_handle) = start_http(&config).await;
+        let (panel_handle, proxy_handle) = start_http(config).await;
         wait(panel_handle, proxy_handle).await;
     } else {
         Config::create().await;
@@ -67,7 +68,7 @@ async fn main() {
 }
 
 /// Waits on things like http servers and signals.
-/// This function should never exit, when waiting is done that
+/// This function should never exit. When waiting is done that
 /// means either there was some problem with one of http server
 /// or some signal was received.
 /// SIGHUP is not supported at this time.
@@ -88,10 +89,10 @@ async fn wait(
             tokio::time::sleep(Duration::from_millis(100)).await;
         },
         _ = proxy_handle => {
-            println!("Proxy exited");
+            error!("Proxy exited");
         },
         _ = panel_handle => {
-            println!("Panel exited");
+            error!("Panel exited");
         }
     }
     std::process::exit(0);

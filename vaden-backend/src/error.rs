@@ -45,4 +45,10 @@ pub(crate) enum VadenError {
 
     #[error("unable to access database {0}")]
     DatabaseError(String),
+
+    #[error("multipart upload error: {0}")]
+    MultipartUploadError(String),
+
+    #[error("site processing error: {0}")]
+    UnableToProcessSite(String),
 }
