@@ -19,7 +19,17 @@
 
 import { reactive } from 'vue';
 
+/**
+ * This is application state. Implementation provides the same functionality as vuex or redux but with slightly
+ * better api. Components are not supposed to have own data but use getters instead.
+ * Also, state should not be accessed directly from components but modification functions should be called.
+ * See examples in components for usage.
+ *
+ */
 const state = reactive({
+    /**
+     * Each component has its own 'substate' to keep things organized.
+     */
   hello_world: {
     count: 0,
   },

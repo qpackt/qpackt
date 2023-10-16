@@ -13,9 +13,9 @@ use std::fs::{remove_file, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-/// Uploads new site as a zip file, unpacks it and registers in data base.
+/// Uploads new site's version as a zip file, unpacks it and registers in database.
 /// The site can be served after the upload.
-pub(crate) async fn upload_site(
+pub(crate) async fn upload_version(
     payload: Multipart,
     request: HttpRequest,
     config: Data<Config>,

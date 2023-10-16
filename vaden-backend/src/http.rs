@@ -18,7 +18,7 @@
 */
 
 use crate::config::Config;
-use crate::panel::upload_site;
+use crate::panel::upload_version;
 use crate::proxy::handler::proxy_handler;
 use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
@@ -66,7 +66,7 @@ fn start_panel_http(
                 .app_data(upstreams.clone())
                 .app_data(app_config.clone())
                 .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
-                .service(web::resource("/upload-site").route(web::post().to(upload_site)))
+                .service(web::resource("/upload-version").route(web::post().to(upload_version)))
         })
         .bind(config.panel_addr())
         .unwrap()
