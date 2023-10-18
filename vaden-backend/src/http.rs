@@ -18,6 +18,7 @@
 */
 
 use crate::config::Config;
+use crate::dao::Dao;
 use crate::panel::upload_version;
 use crate::proxy::handler::proxy_handler;
 use crate::proxy::upstream::Upstreams;
@@ -30,13 +31,15 @@ use tokio::task::JoinHandle;
 /// Returns two join handles so later then can be awaited.
 pub(super) async fn start_http(
     config: Config,
+    dao: Dao,
 ) -> (
     JoinHandle<std::io::Result<()>>,
     JoinHandle<std::io::Result<()>>,
 ) {
     let upstreams = Data::new(Upstreams::default());
     let config = Data::new(config);
-    let panel_handle = start_panel_http(upstreams.clone(), config.clone());
+    let dao = Data::new(dao);
+    let panel_handle = start_panel_http(upstreams.clone(), config.clone(), dao);
     let proxy_handle = start_proxy_http(upstreams, config.proxy_addr());
 
     (panel_handle, proxy_handle)
@@ -58,6 +61,7 @@ fn start_proxy_http(upstreams: Data<Upstreams>, addr: &str) -> JoinHandle<std::i
 fn start_panel_http(
     upstreams: Data<Upstreams>,
     config: Data<Config>,
+    dao: Data<Dao>,
 ) -> JoinHandle<std::io::Result<()>> {
     tokio::spawn({
         let app_config = config.clone();
@@ -65,6 +69,7 @@ fn start_panel_http(
             App::new()
                 .app_data(upstreams.clone())
                 .app_data(app_config.clone())
+                .app_data(dao.clone())
                 .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
                 .service(web::resource("/upload-version").route(web::post().to(upload_version)))
         })

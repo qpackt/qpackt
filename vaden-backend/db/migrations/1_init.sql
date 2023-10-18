@@ -1,7 +1,6 @@
 CREATE TABLE versions (
-    id INT NOT NULL UNIQUE,
-    name TEXT NOT NULL UNIQUE,
-    created TIMESTAMP NOT NULL
+    web_root TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE settings (

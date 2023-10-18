@@ -59,8 +59,8 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
-        Dao::init(config.app_run_directory()).await.unwrap();
-        let (panel_handle, proxy_handle) = start_http(config).await;
+        let dao = Dao::init(config.app_run_directory()).await.unwrap();
+        let (panel_handle, proxy_handle) = start_http(config, dao).await;
         wait(panel_handle, proxy_handle).await;
     } else {
         Config::create().await;

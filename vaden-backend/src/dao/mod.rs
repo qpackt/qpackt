@@ -33,6 +33,22 @@ impl Dao {
         Ok(dao)
     }
 
+    /// Registers new version of the site in database.
+    ///
+    /// Args:
+    /// * web_root - full path to where the files are stored
+    /// * name - name of the version
+    pub(crate) async fn register_version(&self, web_root: &str, name: &str) -> Result<()> {
+        let q = sqlx::query("INSERT INTO versions (web_root, name) values ($1, $2)")
+            .bind(web_root)
+            .bind(name);
+        let mut connection = self.get_sqlite_connection().await?;
+        q.execute(&mut connection)
+            .await
+            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        Ok(())
+    }
+
     async fn get_sqlite_connection(&self) -> Result<SqliteConnection> {
         SqliteConnection::connect(&self.inner.url)
             .await
@@ -50,6 +66,7 @@ impl Dao {
     }
 }
 
+// TODO move to more general module, this has nothing to do with dao
 fn ensure_app_dir_exists(path: &Path) -> Result<()> {
     if !path.exists() {
         create_app_dir(path)
