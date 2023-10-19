@@ -36,21 +36,23 @@ mod config;
 pub mod dao;
 mod error;
 mod password;
-pub mod proxy;
+mod proxy;
 
-mod http;
 mod panel;
 
 use crate::config::Config;
 use crate::dao::Dao;
-
-use crate::http::start_http;
+use crate::proxy::upstream::Upstreams;
+use actix_web::web::Data;
 use log::{error, info};
 use std::env;
+use tokio::task::JoinHandle;
+
+use crate::panel::start_panel_http;
+use crate::proxy::start_proxy_http;
 use std::time::Duration;
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
-use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
@@ -71,7 +73,7 @@ async fn main() {
 /// This function should never exit. When waiting is done that
 /// means either there was some problem with one of http server
 /// or some signal was received.
-/// SIGHUP is not supported at this time.
+/// SIGHUP is not supported yet.
 async fn wait(
     panel_handle: JoinHandle<std::io::Result<()>>,
     proxy_handle: JoinHandle<std::io::Result<()>>,
@@ -96,4 +98,21 @@ async fn wait(
         }
     }
     std::process::exit(0);
+}
+
+/// Starts two actix processes to serve admin's panel and http proxy.
+/// Returns two join handles so later then can be awaited.
+async fn start_http(
+    config: Config,
+    dao: Dao,
+) -> (
+    JoinHandle<std::io::Result<()>>,
+    JoinHandle<std::io::Result<()>>,
+) {
+    let upstreams = Data::new(Upstreams::default());
+    let config = Data::new(config);
+    let dao = Data::new(dao);
+    let panel_handle = start_panel_http(upstreams.clone(), config.clone(), dao);
+    let proxy_handle = start_proxy_http(upstreams, config.proxy_addr());
+    (panel_handle, proxy_handle)
 }

@@ -27,8 +27,6 @@ use yaml_rust::{Yaml, YamlLoader};
 const DOMAIN: &str = "domain";
 const HTTP_PROXY: &str = "http_proxy";
 const HTTPS_PROXY: &str = "https_proxy";
-const CERT: &str = "cert";
-const USERNAME: &str = "username";
 const PASSWORD: &str = "password";
 const ADMIN_PANEL: &str = "admin_panel";
 const RUN_DIR: &str = "run_directory";
@@ -42,10 +40,6 @@ pub(crate) struct Config {
     http_proxy: String, // TODO change this to sockaddr or something.
     /// Host and port for HTTPS traffic
     https_proxy: String,
-    /// Path to file with SSL certificate. Should be writable for vaden user.
-    cert: PathBuf,
-    /// Administrator's user name (for logging into admin panel)
-    username: String, // TODO remove
     /// Administrator's password encoded in `scrypt` format
     password: String,
     /// Host and port for administrator's panel.
@@ -69,15 +63,6 @@ impl Config {
         write!(&mut config, "{}: {}\r\n", DOMAIN, self.domain)?;
         write!(&mut config, "{}: {}\r\n", HTTP_PROXY, self.http_proxy)?;
         write!(&mut config, "{}: {}\r\n", HTTPS_PROXY, self.https_proxy)?;
-        write!(
-            &mut config,
-            "{}: {}\r\n",
-            CERT,
-            self.cert.to_str().ok_or(VadenError::InvalidConfig(
-                "Invalid certificate path".to_string()
-            ))?
-        )?;
-        write!(&mut config, "{}: {}\r\n", USERNAME, self.username)?;
         write!(&mut config, "{}: {}\r\n", PASSWORD, self.password)?;
         write!(&mut config, "{}: {}\r\n", ADMIN_PANEL, self.admin_panel)?;
         write!(
@@ -102,8 +87,6 @@ impl Config {
             domain: from_yaml(DOMAIN, yaml)?,
             http_proxy: from_yaml(HTTP_PROXY, yaml)?,
             https_proxy: from_yaml(HTTPS_PROXY, yaml)?,
-            cert: from_yaml(CERT, yaml)?.into(),
-            username: from_yaml(USERNAME, yaml)?,
             password: from_yaml(PASSWORD, yaml)?,
             admin_panel: from_yaml(ADMIN_PANEL, yaml)?,
             run_directory: from_yaml(RUN_DIR, yaml)?.into(),
@@ -127,8 +110,7 @@ impl Config {
         let domain = read_stdin("Domain")?;
         let http_proxy = read_stdin("Ip/port for HTTP traffic (default 0.0.0.0:8080)")?;
         let https_proxy = read_stdin("Ip/port for HTTPS traffic (default 0.0.0.0:8443)")?;
-        let cert = read_stdin("Path to SSL certificate file (may not exist yet)")?;
-        let username = read_stdin("Administrator's username (default 'admin')")?;
+        // TODO read twice, disable echoing.
         let password = read_stdin("Administrator's password")?;
         let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
         let run_directory = read_stdin("Run directory (default /var/run/vaden)")?;
@@ -136,8 +118,6 @@ impl Config {
             domain,
             http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
             https_proxy: if_empty_then(https_proxy, "0.0.0.0:8443"),
-            cert: cert.into(),
-            username: if_empty_then(username, "admin"),
             password: hash_password(password)?,
             admin_panel: if_empty_then(admin, "0.0.0.0:8444"),
             run_directory: if_empty_then(run_directory, "/var/run/vaden").into(),
