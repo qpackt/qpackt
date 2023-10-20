@@ -16,21 +16,56 @@
 <!--You should have received a copy of the GNU Affero General Public License-->
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
+<template>
+  <div class="card">
+    <TabMenu v-model:activeIndex="active" :model="items">
+      <template #item="{ label, item, props }">
+        <router-link v-if="item.route" v-slot="routerProps" :to="item.route" custom>
+          <a :href="routerProps.href" v-bind="props.action" @click="($event) => routerProps.navigate($event)" @keydown.enter.space="($event) => routerProps.navigate($event)">
+            <span v-bind="props.label">{{ label }}</span>
+          </a>
+        </router-link>
+      </template>
+    </TabMenu>
+    <div class="container">
+      <router-view />
+    </div>
+
+  </div>
+</template>
+
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import { ref, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+
+const router = useRouter();
+const route = useRoute();
+
+const active = ref(0);
+const items = ref([
+  {
+    label: 'Versions',
+    route: '/versions'
+  },
+  {
+    label: 'Analytics',
+    route: '/analytics'
+  },
+]);
+
+onMounted(() => {
+  active.value = items.value.findIndex((item) => route.path === router.resolve(item.route).path);
+})
+
+watch(
+    route,
+    () => {
+      active.value = items.value.findIndex((item) => route.path === router.resolve(item.route).path);
+    },
+    { immediate: true }
+);
 </script>
 
-<template>
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld/>
-</template>
 
 <style scoped>
 .logo {

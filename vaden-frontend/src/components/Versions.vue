@@ -16,19 +16,15 @@
 <!--You should have received a copy of the GNU Affero General Public License-->
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
+<script setup>
+import {increase} from "../state.js";
+</script>
+
 <template>
-  <div>
-    <button type="button" @click="increase">count is {{ get_count() }}</button>
-  </div>
+  Versions template
+  <button type="button" @click="increase">Click me</button>
 </template>
 
+<style scoped>
 
-<script>
-import { increase, get_count } from '../state.js'
-
-export default {
-  methods: {
-    increase, get_count
-  }
-}
-</script>
+</style>

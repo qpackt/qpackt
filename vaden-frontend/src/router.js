@@ -17,21 +17,33 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import './style.css'
-import "primevue/resources/themes/nano/theme.css";
+const Versions = () => import('./components/Versions.vue')
+const Analytics = () => import("./components/Analytics.vue")
 
-import { createApp } from 'vue'
-import PrimeVue from 'primevue/config';
-import router from './router'
+import { createWebHistory, createRouter } from "vue-router";
 
-import TabMenu from "primevue/tabmenu";
-import App from './App.vue'
+const routes = [
+    {
+        path: "/",
+        name: "root",
+        component: Versions
+    },
+    {
+        path: "/versions",
+        name: "versions",
+        component: Versions
+    },
+    {
+        path: "/analytics",
+        name: "analytics",
+        component: Analytics
+    },
 
+]
 
-const app = createApp(App)
-app.component('TabMenu', TabMenu)
+const router = createRouter({
+    routes,
+    history: createWebHistory()
+});
 
-app.use(router)
-app.use(PrimeVue, { ripple: true })
-
-app.mount('#app')
+export default router;
