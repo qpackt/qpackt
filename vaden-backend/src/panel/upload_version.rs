@@ -77,7 +77,7 @@ async fn save_site(field: Field, config: &Config, dao: &Dao) -> Result<String> {
 }
 
 fn create_path(config: &Config, date_time_str: &str) -> Result<PathBuf> {
-    let path = config.app_run_directory().join(date_time_str);
+    let path = config.app_run_directory().join("sites").join(date_time_str);
     fs::create_dir_all(&path)?;
     Ok(path)
 }

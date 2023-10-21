@@ -20,8 +20,9 @@ pub(super) fn start_panel_http(
                 .app_data(upstreams.clone())
                 .app_data(app_config.clone())
                 .app_data(dao.clone())
-                .service(Files::new("/static", "../vaden-frontend/dist").index_file("index.html"))
                 .service(web::resource("/upload-version").route(web::post().to(upload_version)))
+                // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
+                .service(Files::new("/", "../vaden-frontend/dist").index_file("index.html"))
         })
         .bind(config.panel_addr())
         .unwrap()

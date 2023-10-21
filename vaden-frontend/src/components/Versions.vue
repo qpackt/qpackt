@@ -17,12 +17,26 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-import {increase} from "../state.js";
+  import {increase} from "../state.js";
+  import { useToast } from "primevue/usetoast";
+  const toast = useToast();
+
+  const onAdvancedUpload = (e) => {
+    toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
+  };
 </script>
 
 <template>
   Versions template
   <button type="button" @click="increase">Click me</button>
+  <div class="card">
+    <Toast />
+    <FileUpload name="demo[]" url="/upload-version" @upload="onAdvancedUpload($event)" :multiple="false" accept=".zip">
+      <template #empty>
+        <p>Drag and drop files to here to upload.</p>
+      </template>
+    </FileUpload>
+  </div>
 </template>
 
 <style scoped>
