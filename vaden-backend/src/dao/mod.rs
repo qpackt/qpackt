@@ -23,6 +23,7 @@ use sqlx::SqliteConnection;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Default file name with main vaden's database.
 const SQLITE_FILE: &str = "vaden.sqlite";
@@ -34,7 +35,18 @@ pub(crate) struct Dao {
 }
 
 struct DaoInner {
-    url: String,
+    rw_url: RwLock<String>,
+    ro_url: RwLock<String>,
+}
+
+impl DaoInner {
+    async fn get_read_only_url(&self) -> RwLockReadGuard<'_, String> {
+        self.ro_url.read().await
+    }
+
+    async fn get_read_write_url(&self) -> RwLockWriteGuard<'_, String> {
+        self.rw_url.write().await
+    }
 }
 
 impl Dao {
@@ -44,9 +56,13 @@ impl Dao {
         let path = sqlite
             .to_str()
             .ok_or_else(|| VadenError::DatabaseError("Non-UTF-8 file system detected".into()))?;
-        let url = format!("sqlite://{path}?mode=rwc");
+        let rw_url = format!("sqlite://{path}?mode=rwc");
+        let ro_url = format!("sqlite://{path}?mode=r");
         let dao = Self {
-            inner: Arc::new(DaoInner { url }),
+            inner: Arc::new(DaoInner {
+                rw_url: RwLock::new(rw_url),
+                ro_url: RwLock::new(ro_url),
+            }),
         };
         dao.ensure_sqlite_initialized().await?;
         Ok(dao)
@@ -58,31 +74,43 @@ impl Dao {
     /// * web_root - full path to where the files are stored
     /// * name - name of the version
     pub(crate) async fn register_version(&self, web_root: &str, name: &str) -> Result<()> {
-        let q = sqlx::query("INSERT INTO versions (web_root, name) values ($1, $2)")
+        let q = sqlx::query("INSERT INTO versions (web_root, name) VALUES ($1, $2)")
             .bind(web_root)
             .bind(name);
-        let mut connection = self.get_sqlite_connection().await?;
+        let url = self.inner.get_read_write_url().await;
+        let mut connection = get_sqlite_connection(&url).await?;
         q.execute(&mut connection)
             .await
             .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
     }
 
-    async fn get_sqlite_connection(&self) -> Result<SqliteConnection> {
-        SqliteConnection::connect(&self.inner.url)
+    /// Lists all versions of the site from database in alphabetical order.
+    pub(crate) async fn list_versions(&self) -> Result<Vec<Version>> {
+        let url = self.inner.get_read_only_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
+        let rows = sqlx::query_as::<_, Version>("SELECT name FROM versions ORDER BY name")
+            .fetch_all(&mut conn)
             .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))
+            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        Ok(rows)
     }
 
     /// Called on startup to ensure that sqlite file exists and all migrations are applied.
     async fn ensure_sqlite_initialized(&self) -> Result<()> {
-        let mut conn = self.get_sqlite_connection().await?;
+        let url = self.inner.get_read_write_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
         sqlx::migrate!("db/migrations")
             .run(&mut conn)
             .await
             .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
     }
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct Version {
+    pub name: String,
 }
 
 // TODO move to more general module, this has nothing to do with dao
@@ -106,4 +134,10 @@ fn create_app_dir(path: &Path) -> Result<()> {
             e
         ))
     })
+}
+
+async fn get_sqlite_connection(url: &str) -> Result<SqliteConnection> {
+    SqliteConnection::connect(url)
+        .await
+        .map_err(|e| VadenError::DatabaseError(e.to_string()))
 }

@@ -19,11 +19,13 @@
 
 use crate::config::Config;
 use crate::dao::Dao;
+use crate::panel::versions::list::list_versions;
 use crate::panel::versions::upload::upload_version;
 use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
-use actix_web::web::Data;
-use actix_web::{web, App, HttpServer};
+use actix_web::web::{Data, Json};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use serde::Serialize;
 use tokio::task::JoinHandle;
 
 pub(super) mod versions;
@@ -41,6 +43,7 @@ pub(super) fn start_panel_http(
                 .app_data(app_config.clone())
                 .app_data(dao.clone())
                 .service(web::resource("/upload-version").route(web::post().to(upload_version)))
+                .service(web::resource("/list-versions").route(web::get().to(list_versions)))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", "../vaden-frontend/dist").index_file("index.html"))
         })
@@ -48,4 +51,11 @@ pub(super) fn start_panel_http(
         .unwrap()
         .run()
     })
+}
+
+fn json_response<T>(request: &HttpRequest, content: T) -> HttpResponse
+where
+    T: Serialize,
+{
+    Json(content).respond_to(request).map_into_boxed_body()
 }

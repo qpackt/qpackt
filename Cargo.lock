@@ -2493,6 +2493,8 @@ dependencies = [
  "futures",
  "log",
  "scrypt",
+ "serde",
+ "serde_json",
  "sqlx",
  "thiserror",
  "tokio",
