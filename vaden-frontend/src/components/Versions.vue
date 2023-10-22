@@ -17,7 +17,7 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-  import {increase} from "../state.js";
+  import { increase } from "../state.js";
   import { useToast } from "primevue/usetoast";
   const toast = useToast();
 
