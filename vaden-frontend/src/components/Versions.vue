@@ -17,13 +17,30 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
+  import { ref } from 'vue';
   import { increase } from "../state.js";
   import { useToast } from "primevue/usetoast";
-  const toast = useToast();
+  import { onMounted } from "vue";
+  import DataTable from 'primevue/datatable';
+  import Column from 'primevue/column';
+  import Toast from "primevue/toast";
+  import FileUpload from "primevue/fileupload";
 
-  const onAdvancedUpload = (e) => {
-    toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
+
+  import axios from "axios";
+  const toast = useToast();
+  const versions = ref([]);
+
+  const onAdvancedUpload = async (e) => {
+    toast.add({severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000})
+    await loadVersions()
   };
+
+  async function loadVersions() {
+    axios.get('/list-versions').then(r => (versions.value = r.data))
+  }
+
+  onMounted(() => loadVersions())
 </script>
 
 <template>
@@ -37,6 +54,14 @@
       </template>
     </FileUpload>
   </div>
+  <DataTable :value="versions" tableStyle="min-width: 50rem">
+    <template #header>
+      <div class="flex flex-wrap align-items-center justify-content-between gap-2">
+        <span class="text-xl text-900 font-bold">Versions</span>
+      </div>
+    </template>
+    <Column field="name" header="Name"></Column>
+  </DataTable>
 </template>
 
 <style scoped>

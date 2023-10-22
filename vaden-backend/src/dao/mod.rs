@@ -57,7 +57,7 @@ impl Dao {
             .to_str()
             .ok_or_else(|| VadenError::DatabaseError("Non-UTF-8 file system detected".into()))?;
         let rw_url = format!("sqlite://{path}?mode=rwc");
-        let ro_url = format!("sqlite://{path}?mode=r");
+        let ro_url = format!("sqlite://{path}?mode=ro");
         let dao = Self {
             inner: Arc::new(DaoInner {
                 rw_url: RwLock::new(rw_url),

@@ -25,17 +25,9 @@ import PrimeVue from 'primevue/config';
 import router from './router'
 import ToastService from "primevue/toastservice";
 
-import TabMenu from "primevue/tabmenu";
-import Toast from "primevue/toast";
-import FileUpload from "primevue/fileupload";
 import App from './App.vue'
 
-
 const app = createApp(App)
-app.component('TabMenu', TabMenu)
-app.component('Toast', Toast)
-app.component('FileUpload', FileUpload)
-
 
 app.use(router)
 app.use(ToastService)

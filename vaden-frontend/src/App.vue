@@ -38,6 +38,8 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
+import TabMenu from "primevue/tabmenu";
+
 const router = useRouter();
 const route = useRoute();
 
