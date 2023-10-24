@@ -40,6 +40,10 @@
     axios.get('/list-versions').then(r => (versions.value = r.data))
   }
 
+  async function deleteVersion(name) {
+    console.log('Deleting ', name);
+    await axios.delete(`/delete-version/${name}`)
+  }
   onMounted(() => loadVersions())
 </script>
 
@@ -61,6 +65,11 @@
       </div>
     </template>
     <Column field="name" header="Name"></Column>
+    <Column header="Actions">
+      <template #body="slotProps">
+        <Button @click="deleteVersion(slotProps.data.name)">Delete</Button>
+      </template>
+    </Column>
   </DataTable>
 </template>
 

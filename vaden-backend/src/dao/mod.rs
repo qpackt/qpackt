@@ -18,8 +18,8 @@
 */
 
 use crate::error::{Result, VadenError};
-use sqlx::Connection;
 use sqlx::SqliteConnection;
+use sqlx::{Connection, Row};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
@@ -83,6 +83,25 @@ impl Dao {
             .await
             .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
+    }
+
+    /// Delete version from the database and return its path so it can be deleted from the filesystem as well.
+    /// Arguments:
+    ///
+    /// - name: name of the version
+    pub(crate) async fn delete_version(&self, name: &str) -> Result<String> {
+        let q = sqlx::query("DELETE FROM versions WHERE name = $1 RETURNING web_root").bind(name);
+        let url = self.inner.get_read_write_url().await;
+        let mut connection = get_sqlite_connection(&url).await?;
+        let row = q
+            .fetch_optional(&mut connection)
+            .await
+            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        let row = row.ok_or_else(|| VadenError::DatabaseError("No such version".into()))?;
+        let path = row.try_get::<String, _>("web_root").map_err(|_| {
+            VadenError::DatabaseError("No column 'web_root' in versions table".into())
+        })?;
+        Ok(path)
     }
 
     /// Lists all versions of the site from database in alphabetical order.
