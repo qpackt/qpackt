@@ -22,7 +22,6 @@ use crate::proxy::upstream::Upstreams;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
 use tokio::task::JoinHandle;
-
 pub(super) mod handler;
 pub(super) mod upstream;
 

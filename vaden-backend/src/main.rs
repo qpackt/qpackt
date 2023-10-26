@@ -35,24 +35,25 @@
 mod config;
 pub mod dao;
 mod error;
+mod panel;
 mod password;
 mod proxy;
 
-mod panel;
-
 use crate::config::Config;
 use crate::dao::Dao;
+use crate::error::Result;
+use crate::error::VadenError;
+use crate::panel::start_panel_http;
+use crate::proxy::start_proxy_http;
 use crate::proxy::upstream::Upstreams;
 use actix_web::web::Data;
 use log::{error, info};
-use std::env;
-use tokio::task::JoinHandle;
-
-use crate::panel::start_panel_http;
-use crate::proxy::start_proxy_http;
+use std::path::Path;
 use std::time::Duration;
+use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
@@ -61,6 +62,7 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
+        ensure_app_dir_exists(config.app_run_directory()).unwrap();
         let dao = Dao::init(config.app_run_directory()).await.unwrap();
         let (panel_handle, proxy_handle) = start_http(config, dao).await;
         wait(panel_handle, proxy_handle).await;
@@ -115,4 +117,26 @@ async fn start_http(
     let panel_handle = start_panel_http(upstreams.clone(), config.clone(), dao);
     let proxy_handle = start_proxy_http(upstreams, config.proxy_addr());
     (panel_handle, proxy_handle)
+}
+
+fn ensure_app_dir_exists(path: &Path) -> Result<()> {
+    if !path.exists() {
+        create_app_dir(path)
+    } else if !path.is_dir() {
+        Err(VadenError::InvalidConfig(format!(
+            "App dir is not a directory: {path:?}"
+        )))
+    } else {
+        Ok(())
+    }
+}
+
+fn create_app_dir(path: &Path) -> Result<()> {
+    fs::create_dir_all(path).map_err(|e| {
+        VadenError::InvalidConfig(format!(
+            "Unable to create app directory {}: {}",
+            path.to_string_lossy(),
+            e
+        ))
+    })
 }

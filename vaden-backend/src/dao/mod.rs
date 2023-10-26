@@ -17,13 +17,14 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+mod inner;
+
+use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
-use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Default file name with main vaden's database.
 const SQLITE_FILE: &str = "vaden.sqlite";
@@ -34,35 +35,19 @@ pub(crate) struct Dao {
     inner: Arc<DaoInner>,
 }
 
-struct DaoInner {
-    rw_url: RwLock<String>,
-    ro_url: RwLock<String>,
-}
-
-impl DaoInner {
-    async fn get_read_only_url(&self) -> RwLockReadGuard<'_, String> {
-        self.ro_url.read().await
-    }
-
-    async fn get_read_write_url(&self) -> RwLockWriteGuard<'_, String> {
-        self.rw_url.write().await
-    }
-}
-
 impl Dao {
+    /// Initialize database (ensure app dir exists, create file, etc...)
+    /// Arguments:
+    ///
+    /// * base_dir: path for vaden.sqlite file.
     pub(crate) async fn init(base_dir: &Path) -> Result<Self> {
-        ensure_app_dir_exists(base_dir)?;
         let sqlite = base_dir.join(SQLITE_FILE);
         let path = sqlite
             .to_str()
             .ok_or_else(|| VadenError::DatabaseError("Non-UTF-8 file system detected".into()))?;
-        let rw_url = format!("sqlite://{path}?mode=rwc");
-        let ro_url = format!("sqlite://{path}?mode=ro");
+
         let dao = Self {
-            inner: Arc::new(DaoInner {
-                rw_url: RwLock::new(rw_url),
-                ro_url: RwLock::new(ro_url),
-            }),
+            inner: Arc::new(DaoInner::init(path)),
         };
         dao.ensure_sqlite_initialized().await?;
         Ok(dao)
@@ -130,29 +115,6 @@ impl Dao {
 #[derive(Debug, sqlx::FromRow)]
 pub struct Version {
     pub name: String,
-}
-
-// TODO move to more general module, this has nothing to do with dao
-fn ensure_app_dir_exists(path: &Path) -> Result<()> {
-    if !path.exists() {
-        create_app_dir(path)
-    } else if !path.is_dir() {
-        Err(VadenError::InvalidConfig(format!(
-            "App dir is not a directory: {path:?}"
-        )))
-    } else {
-        Ok(())
-    }
-}
-
-fn create_app_dir(path: &Path) -> Result<()> {
-    fs::create_dir_all(path).map_err(|e| {
-        VadenError::InvalidConfig(format!(
-            "Unable to create app directory {}: {}",
-            path.to_string_lossy(),
-            e
-        ))
-    })
 }
 
 async fn get_sqlite_connection(url: &str) -> Result<SqliteConnection> {
