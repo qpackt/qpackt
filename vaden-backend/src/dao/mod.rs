@@ -21,9 +21,10 @@ mod inner;
 
 use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};
+use crate::manager::strategy::Strategy;
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Default file name with main vaden's database.
@@ -93,11 +94,36 @@ impl Dao {
     pub(crate) async fn list_versions(&self) -> Result<Vec<Version>> {
         let url = self.inner.get_read_only_url().await;
         let mut conn = get_sqlite_connection(&url).await?;
-        let rows = sqlx::query_as::<_, Version>("SELECT name FROM versions ORDER BY name")
+        let rows = sqlx::query("SELECT name, web_root, strategy FROM versions ORDER BY name")
             .fetch_all(&mut conn)
             .await
             .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
-        Ok(rows)
+        let mut versions = Vec::with_capacity(rows.len());
+        for row in rows {
+            let name = row.try_get::<String, _>("name").map_err(|_| {
+                VadenError::DatabaseError("No column 'name' in versions table".into())
+            })?;
+            let web_root = row.try_get::<String, _>("web_root").map_err(|_| {
+                VadenError::DatabaseError("No column 'web_root' in versions table".into())
+            })?;
+            let web_root = PathBuf::from(web_root);
+            let strategy = row.try_get::<String, _>("strategy").map_err(|_| {
+                VadenError::DatabaseError("No column 'strategy' in versions table".into())
+            })?;
+
+            let strategy = serde_json::from_str::<Strategy>(&strategy).map_err(|_| {
+                VadenError::DatabaseError(format!(
+                    "Unable to deserialize strategy '{}' from json",
+                    strategy
+                ))
+            })?;
+            versions.push(Version {
+                name,
+                web_root,
+                strategy,
+            })
+        }
+        Ok(versions)
     }
 
     /// Called on startup to ensure that sqlite file exists and all migrations are applied.
@@ -112,9 +138,11 @@ impl Dao {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug)]
 pub struct Version {
     pub name: String,
+    pub web_root: PathBuf,
+    pub strategy: Strategy,
 }
 
 async fn get_sqlite_connection(url: &str) -> Result<SqliteConnection> {

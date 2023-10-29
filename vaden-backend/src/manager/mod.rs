@@ -17,27 +17,4 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::proxy::handler::proxy_handler;
-use crate::proxy::upstream::Upstreams;
-use actix_web::web::Data;
-use actix_web::{web, App, HttpServer};
-use tokio::task::JoinHandle;
-
-pub(super) mod handler;
-pub(super) mod upstream;
-
-pub(super) fn start_proxy_http(
-    upstreams: Data<Upstreams>,
-    addr: &str,
-) -> JoinHandle<std::io::Result<()>> {
-    tokio::spawn(
-        HttpServer::new(move || {
-            App::new()
-                .app_data(upstreams.clone())
-                .default_service(web::to(proxy_handler))
-        })
-        .bind(addr)
-        .unwrap()
-        .run(),
-    )
-}
+pub(crate) mod strategy;

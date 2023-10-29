@@ -35,6 +35,7 @@
 mod config;
 pub mod dao;
 mod error;
+mod manager;
 mod panel;
 mod password;
 mod proxy;

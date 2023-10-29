@@ -17,27 +17,16 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::proxy::handler::proxy_handler;
-use crate::proxy::upstream::Upstreams;
-use actix_web::web::Data;
-use actix_web::{web, App, HttpServer};
-use tokio::task::JoinHandle;
+use serde::{Deserialize, Serialize};
 
-pub(super) mod handler;
-pub(super) mod upstream;
-
-pub(super) fn start_proxy_http(
-    upstreams: Data<Upstreams>,
-    addr: &str,
-) -> JoinHandle<std::io::Result<()>> {
-    tokio::spawn(
-        HttpServer::new(move || {
-            App::new()
-                .app_data(upstreams.clone())
-                .default_service(web::to(proxy_handler))
-        })
-        .bind(addr)
-        .unwrap()
-        .run(),
-    )
+/// Traffic split strategy.
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(variant_size_differences)]
+pub enum Strategy {
+    /// No new traffic send to this version. Used as default for a new [Version]
+    Inactive,
+    /// Sends given percent of new sessions to corresponding [Version]
+    Percent(f32),
+    /// Sends new sessions that have given url param set to given value
+    UrlParam(String, String),
 }

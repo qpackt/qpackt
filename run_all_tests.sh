@@ -18,7 +18,6 @@ function stop_backend() {
     (
       cd vaden-backend || exit
       killall vaden-backend
-      rm -Rf test_run_directory
     )
 }
 
