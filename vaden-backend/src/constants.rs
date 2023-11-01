@@ -17,26 +17,5 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::proxy::handler::proxy_handler;
-use crate::VersionHandler;
-use actix_web::web::Data;
-use actix_web::{web, App, HttpServer};
-use tokio::task::JoinHandle;
-
-pub(super) mod handler;
-
-pub(super) fn start_proxy_http(
-    addr: &str,
-    versions: Data<Vec<VersionHandler>>,
-) -> JoinHandle<std::io::Result<()>> {
-    tokio::spawn(
-        HttpServer::new(move || {
-            App::new()
-                .app_data(versions.clone())
-                .default_service(web::to(proxy_handler))
-        })
-        .bind(addr)
-        .unwrap()
-        .run(),
-    )
-}
+/// Subdirectory for site's versions (inside [crate::config::Config::run_directory]).
+pub const VERSIONS_SUBDIRECTORY: &str = "sites";

@@ -17,20 +17,22 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::proxy::upstream::Upstreams;
+use crate::VersionHandler;
 use actix_web::dev::RequestHead;
 use actix_web::web::{Data, Payload};
 use actix_web::{HttpRequest, HttpResponse};
 use awc::{Client, ClientRequest};
+use log::debug;
 use url::Url;
 
 /// Basic proxy handler (method agnostic).
 pub(crate) async fn proxy_handler(
     payload: Payload,
     client_request: HttpRequest,
-    upstreams: Data<Upstreams>,
+    versions: Data<Vec<VersionHandler>>,
 ) -> HttpResponse {
-    let destination = build_upstream_url(&client_request, &upstreams).await;
+    let destination = build_upstream_url(&client_request, &versions).await;
+    debug!("Proxying request to {}", destination);
     build_response(payload, client_request.head(), destination).await
 }
 
@@ -56,8 +58,8 @@ fn build_request(head: &RequestHead, destination: Url) -> ClientRequest {
     proxy_request
 }
 
-async fn build_upstream_url(client_request: &HttpRequest, upstreams: &Data<Upstreams>) -> Url {
-    let mut destination = upstreams.get_any_url().await;
+async fn build_upstream_url(client_request: &HttpRequest, versions: &[VersionHandler]) -> Url {
+    let mut destination = versions[0].upstream.clone();
     destination.set_path(client_request.uri().path());
     destination.set_query(client_request.uri().query());
     destination

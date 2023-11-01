@@ -22,7 +22,6 @@ use crate::dao::Dao;
 use crate::panel::versions::delete::delete_version;
 use crate::panel::versions::list::list_versions;
 use crate::panel::versions::upload::upload_version;
-use crate::proxy::upstream::Upstreams;
 use actix_files::Files;
 use actix_web::web::{Data, Json};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
@@ -32,7 +31,6 @@ use tokio::task::JoinHandle;
 pub(super) mod versions;
 
 pub(super) fn start_panel_http(
-    upstreams: Data<Upstreams>,
     config: Data<Config>,
     dao: Data<Dao>,
 ) -> JoinHandle<std::io::Result<()>> {
@@ -40,7 +38,6 @@ pub(super) fn start_panel_http(
         let app_config = config.clone();
         HttpServer::new(move || {
             App::new()
-                .app_data(upstreams.clone())
                 .app_data(app_config.clone())
                 .app_data(dao.clone())
                 .service(web::resource("/upload-version").route(web::post().to(upload_version)))

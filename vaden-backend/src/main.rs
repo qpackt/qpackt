@@ -33,6 +33,7 @@
     variant_size_differences
 )]
 mod config;
+pub mod constants;
 pub mod dao;
 mod error;
 mod manager;
@@ -41,20 +42,24 @@ mod password;
 mod proxy;
 
 use crate::config::Config;
-use crate::dao::Dao;
+use crate::constants::VERSIONS_SUBDIRECTORY;
+use crate::dao::{Dao, Version};
 use crate::error::Result;
 use crate::error::VadenError;
 use crate::panel::start_panel_http;
 use crate::proxy::start_proxy_http;
-use crate::proxy::upstream::Upstreams;
+use actix_files::Files;
 use actix_web::web::Data;
+use actix_web::{App, HttpServer};
 use log::{error, info};
+use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
 use std::time::Duration;
 use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::task::JoinHandle;
+use url::Url;
 
 #[tokio::main]
 async fn main() {
@@ -65,7 +70,8 @@ async fn main() {
         let config = Config::read(config_path).await.unwrap();
         ensure_app_dir_exists(config.app_run_directory()).unwrap();
         let dao = Dao::init(config.app_run_directory()).await.unwrap();
-        let (panel_handle, proxy_handle) = start_http(config, dao).await;
+        let versions = dao.list_versions().await.unwrap();
+        let (panel_handle, proxy_handle) = start_http(config, dao, versions).await;
         wait(panel_handle, proxy_handle).await;
     } else {
         Config::create().await;
@@ -108,16 +114,67 @@ async fn wait(
 async fn start_http(
     config: Config,
     dao: Dao,
+    versions: Vec<Version>,
 ) -> (
     JoinHandle<std::io::Result<()>>,
     JoinHandle<std::io::Result<()>>,
 ) {
-    let upstreams = Data::new(Upstreams::default());
     let config = Data::new(config);
     let dao = Data::new(dao);
-    let panel_handle = start_panel_http(upstreams.clone(), config.clone(), dao);
-    let proxy_handle = start_proxy_http(upstreams, config.proxy_addr());
+    let mut versions = build_version_handlers(versions);
+    start_version_servers(&mut versions, config.app_run_directory()).await;
+    let versions = Data::new(versions);
+    let panel_handle = start_panel_http(config.clone(), dao);
+    let proxy_handle = start_proxy_http(config.proxy_addr(), versions);
     (panel_handle, proxy_handle)
+}
+
+async fn start_version_servers(handlers: &mut Vec<VersionHandler>, run_dir: &Path) {
+    for handler in handlers {
+        // if !matches!(handler.version.strategy, Strategy::Inactive) {
+        info!(
+            "Starting version {} on port {}",
+            handler.version.name, handler.port
+        );
+        start_version_server(handler, run_dir).await;
+        // }
+    }
+}
+
+async fn start_version_server(version_handler: &mut VersionHandler, run_dir: &Path) {
+    let path = run_dir
+        .join(VERSIONS_SUBDIRECTORY)
+        .join(&version_handler.version.web_root);
+    let task = tokio::spawn({
+        HttpServer::new(move || {
+            App::new().service(Files::new("/", path.clone()).index_file("index.html"))
+        })
+        .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, version_handler.port))
+        .unwrap()
+        .run()
+    });
+    version_handler.task = Some(task);
+}
+
+pub(crate) struct VersionHandler {
+    port: u16,
+    upstream: Url,
+    version: Version,
+    task: Option<JoinHandle<std::io::Result<()>>>,
+}
+
+fn build_version_handlers(versions: Vec<Version>) -> Vec<VersionHandler> {
+    let mut handlers = Vec::with_capacity(versions.len());
+    for (id, version) in versions.into_iter().enumerate() {
+        let port = 9000 + id as u16;
+        handlers.push(VersionHandler {
+            port,
+            upstream: Url::parse(format!("http://localhost:{}", port).as_str()).unwrap(),
+            version,
+            task: None,
+        })
+    }
+    handlers
 }
 
 fn ensure_app_dir_exists(path: &Path) -> Result<()> {
