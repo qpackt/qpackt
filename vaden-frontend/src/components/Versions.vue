@@ -17,34 +17,47 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-  import { ref } from 'vue';
-  import { increase } from "../state.js";
-  import { useToast } from "primevue/usetoast";
-  import { onMounted } from "vue";
-  import DataTable from 'primevue/datatable';
-  import Column from 'primevue/column';
+import {addVersion, deleteVersions, increase, listVersions} from "../state.js";
+  import {useToast} from "primevue/usetoast";
+  import {onMounted, reactive} from "vue";
   import Toast from "primevue/toast";
   import FileUpload from "primevue/fileupload";
 
 
   import axios from "axios";
+  import Strategy from "./Strategy.vue";
   const toast = useToast();
-  const versions = ref([]);
+  const versions = reactive(listVersions());
 
   const onAdvancedUpload = async (e) => {
     toast.add({severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000})
+    deleteVersions()
     await loadVersions()
   };
 
   async function loadVersions() {
-    axios.get('/list-versions').then(r => (versions.value = r.data))
+    let versions = listVersions();
+    if (versions.list.length === 0) {
+      axios.get('/list-versions').then(r => {
+        for (const version of r.data) {
+          addVersion(version.name, version.strategy)
+        }
+      })
+    }
   }
 
   async function deleteVersion(name) {
-    console.log('Deleting ', name);
     await axios.delete(`/delete-version/${name}`)
+    deleteVersions()
+    await loadVersions()
   }
+
+  async function updateVersions() {
+    await axios.post(`/update-versions`, versions.list)
+  }
+
   onMounted(() => loadVersions())
+
 </script>
 
 <template>
@@ -58,19 +71,15 @@
       </template>
     </FileUpload>
   </div>
-  <DataTable :value="versions" tableStyle="min-width: 50rem">
-    <template #header>
-      <div class="flex flex-wrap align-items-center justify-content-between gap-2">
-        <span class="text-xl text-900 font-bold">Versions</span>
-      </div>
-    </template>
-    <Column field="name" header="Name"></Column>
-    <Column header="Actions">
-      <template #body="slotProps">
-        <Button @click="deleteVersion(slotProps.data.name)">Delete</Button>
-      </template>
-    </Column>
-  </DataTable>
+  <div>
+    <div v-for="version in versions.list">
+      Name: {{version.name}}
+      <Strategy :strategy="version.strategy" :name="version.name"/>
+      <Button @click="deleteVersion(version.name)">Delete</Button>
+    </div>
+    <Button @click="updateVersions" :disabled="!versions.changed">Update</Button>
+  </div>
+
 </template>
 
 <style scoped>

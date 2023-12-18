@@ -58,6 +58,7 @@ use std::time::Duration;
 use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use url::Url;
 
@@ -123,21 +124,22 @@ async fn start_http(
     let dao = Data::new(dao);
     let mut versions = build_version_handlers(versions);
     start_version_servers(&mut versions, config.app_run_directory()).await;
-    let versions = Data::new(versions);
-    let panel_handle = start_panel_http(config.clone(), dao);
+    let versions = Data::new(RwLock::new(versions));
+    let panel_handle = start_panel_http(config.clone(), dao, versions.clone());
     let proxy_handle = start_proxy_http(config.proxy_addr(), versions);
     (panel_handle, proxy_handle)
 }
 
+/// Starts a normal 'Files' server to serve a version.
+/// Doesn't check for 'Inactive' strategy because there may be sessions using this version and started before
+/// this version became inactive.
 async fn start_version_servers(handlers: &mut Vec<VersionHandler>, run_dir: &Path) {
     for handler in handlers {
-        // if !matches!(handler.version.strategy, Strategy::Inactive) {
         info!(
             "Starting version {} on port {}",
             handler.version.name, handler.port
         );
         start_version_server(handler, run_dir).await;
-        // }
     }
 }
 

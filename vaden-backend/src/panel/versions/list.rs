@@ -23,17 +23,10 @@ use actix_web::web::Data;
 use actix_web::{HttpRequest, HttpResponse};
 use awc::http::StatusCode;
 use log::error;
-use serde_json::json;
 
 pub(crate) async fn list_versions(request: HttpRequest, dao: Data<Dao>) -> HttpResponse {
     match dao.list_versions().await {
-        Ok(versions) => {
-            let json = versions
-                .into_iter()
-                .map(|v| json!({"name": v.name}))
-                .collect::<Vec<_>>();
-            json_response(&request, json)
-        }
+        Ok(versions) => json_response(&request, versions),
         Err(e) => {
             error!("Unable to list versions: {}", e.to_string());
             HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR)

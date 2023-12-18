@@ -73,7 +73,7 @@ async fn save_site(field: Field, config: &Config, dao: &Dao) -> Result<String> {
     let name = create_name();
     let target = create_path(config, &name)?;
     let zip_path = wait_for_content(field, &target).await?;
-    unzip_and_register(&zip_path, &target, &name, dao).await?;
+    unzip_and_register(&zip_path, &target, &name, config.app_run_directory(), dao).await?;
     Ok(name)
 }
 
@@ -110,8 +110,19 @@ async fn wait_for_content(mut field: Field, target: &Path) -> Result<PathBuf> {
     Ok(zip_path)
 }
 
-async fn unzip_and_register(zip_path: &Path, target: &Path, name: &str, dao: &Dao) -> Result<()> {
+async fn unzip_and_register(
+    zip_path: &Path,
+    target: &Path,
+    name: &str,
+    app_run_dir: &Path,
+    dao: &Dao,
+) -> Result<()> {
     let web_root = unzip_site(zip_path, target)?;
+    let web_root = web_root
+        .strip_prefix(app_run_dir.join(VERSIONS_SUBDIRECTORY))
+        .map_err(|e| {
+            VadenError::UnableToProcessSite(format!("unable to strip site prefix: {}", e))
+        })?;
     dao.register_version(web_root.to_str().unwrap(), name).await
 }
 

@@ -18,15 +18,31 @@
 */
 
 use serde::{Deserialize, Serialize};
-
+/*
+Deserialize to:
+"Inactive"
+{"Weight":20.0}
+{"UrlParam":["source","ad"]}
+ */
 /// Traffic split strategy.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(variant_size_differences)]
 pub enum Strategy {
     /// No new traffic send to this version. Used as default for a new [Version]
     Inactive,
-    /// Sends given percent of new sessions to corresponding [Version]
-    Percent(f32),
+    /// Calculate percent of sessions based on the total sum of all weights.
+    /// Only 'Weight' strategies are counted towards the total sum.
+    /// Example:
+    /// * version1 - weight 1
+    /// * version2 - weight 9
+    /// * version3 - url param
+    /// version2 will get 90% of traffic, version1 will get 10%, version3 will get all traffic with required url param.
+    /// Example:
+    /// * version1 - weight 10
+    /// * version2 - weight 10
+    /// * version3 - inactive
+    /// version1 and version2 will get 50% of traffic. version3 will not get any traffic.
+    Weight(f32),
     /// Sends new sessions that have given url param set to given value
     UrlParam(String, String),
 }

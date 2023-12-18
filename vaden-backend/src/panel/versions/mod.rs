@@ -18,4 +18,5 @@
 */
 pub(super) mod delete;
 pub(super) mod list;
+pub(crate) mod update;
 pub(super) mod upload;

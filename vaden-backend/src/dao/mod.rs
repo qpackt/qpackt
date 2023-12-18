@@ -22,6 +22,8 @@ mod inner;
 use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};
 use crate::manager::strategy::Strategy;
+use log::info;
+use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
 use std::path::{Path, PathBuf};
@@ -54,15 +56,18 @@ impl Dao {
         Ok(dao)
     }
 
-    /// Registers new version of the site in database.
+    /// Registers new version of the site in database. By default the new version is 'Inactive', i.e. will not get any traffic.
     ///
     /// Args:
     /// * web_root - full path to where the files are stored
     /// * name - name of the version
     pub(crate) async fn register_version(&self, web_root: &str, name: &str) -> Result<()> {
-        let q = sqlx::query("INSERT INTO versions (web_root, name) VALUES ($1, $2)")
+        info!("Registering new version. Name: {} Root: {}", name, web_root);
+        let strategy = serde_json::to_string(&Strategy::Inactive).unwrap();
+        let q = sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
             .bind(web_root)
-            .bind(name);
+            .bind(name)
+            .bind(&strategy);
         let url = self.inner.get_read_write_url().await;
         let mut connection = get_sqlite_connection(&url).await?;
         q.execute(&mut connection)
@@ -126,6 +131,37 @@ impl Dao {
         Ok(versions)
     }
 
+    /// Saves versions to the database
+    pub(crate) async fn save_versions(&self, versions: &[Version]) -> Result<()> {
+        let url = self.inner.get_read_write_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
+        let mut transaction = conn
+            .begin()
+            .await
+            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        let q = sqlx::query("DELETE FROM versions");
+        q.execute(&mut *transaction)
+            .await
+            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        for version in versions {
+            let web_root = version.web_root.to_str().unwrap();
+            let strategy = serde_json::to_string(&version.strategy).unwrap();
+            let q =
+                sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
+                    .bind(web_root)
+                    .bind(&version.name)
+                    .bind(&strategy);
+            q.execute(&mut *transaction)
+                .await
+                .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        }
+        transaction
+            .commit()
+            .await
+            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        Ok(())
+    }
+
     /// Called on startup to ensure that sqlite file exists and all migrations are applied.
     async fn ensure_sqlite_initialized(&self) -> Result<()> {
         let url = self.inner.get_read_write_url().await;
@@ -138,7 +174,7 @@ impl Dao {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Version {
     pub name: String,
     pub web_root: PathBuf,

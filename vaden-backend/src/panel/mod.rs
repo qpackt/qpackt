@@ -21,11 +21,14 @@ use crate::config::Config;
 use crate::dao::Dao;
 use crate::panel::versions::delete::delete_version;
 use crate::panel::versions::list::list_versions;
+use crate::panel::versions::update::update_versions;
 use crate::panel::versions::upload::upload_version;
+use crate::VersionHandler;
 use actix_files::Files;
 use actix_web::web::{Data, Json};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use serde::Serialize;
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
 pub(super) mod versions;
@@ -33,13 +36,17 @@ pub(super) mod versions;
 pub(super) fn start_panel_http(
     config: Data<Config>,
     dao: Data<Dao>,
+    versions: Data<RwLock<Vec<VersionHandler>>>,
 ) -> JoinHandle<std::io::Result<()>> {
     tokio::spawn({
         let app_config = config.clone();
+        let versions = versions.clone();
         HttpServer::new(move || {
             App::new()
                 .app_data(app_config.clone())
+                .app_data(versions.clone())
                 .app_data(dao.clone())
+                .service(web::resource("/update-versions").route(web::post().to(update_versions)))
                 .service(web::resource("/upload-version").route(web::post().to(upload_version)))
                 .service(web::resource("/list-versions").route(web::get().to(list_versions)))
                 .service(

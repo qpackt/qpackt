@@ -30,11 +30,46 @@ const state = reactive({
     /**
      * Each component has its own 'substate' to keep things organized.
      */
-  hello_world: {
-    count: 0,
-  },
+    hello_world: {
+      count: 0,
+    },
+    /**
+     * /versions page's state
+     */
+    versions: {
+        /**
+         * Indicates whether there were some changes made. Used to enable "Update" button
+         */
+        changed: false,
+        /**
+         * List of versions. Single version is {'name':name, 'strategy':strategy}
+         */
+        list: [],
+    }
 });
 
+export function addVersion(name, value) {
+    state.versions.list.push({name: name, strategy: value})
+}
+
+export function updateVersion(name, value) {
+    for (const version of state.versions.list) {
+        if (version.name === name) {
+            version.strategy = value
+            break
+        }
+    }
+    state.versions.changed = true
+}
+
+export function listVersions() {
+    return state.versions
+}
+
+export function deleteVersions() {
+    state.versions.changed = false
+    state.versions.list.length = 0
+}
 export async function increase() {
     state.hello_world.count += 1
 }

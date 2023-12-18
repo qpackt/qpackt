@@ -18,7 +18,7 @@
 */
 
 import './style.css'
-import "primevue/resources/themes/nano/theme.css";
+import "primevue/resources/themes/md-light-indigo/theme.css";
 
 import { createApp } from 'vue'
 import PrimeVue from 'primevue/config';
