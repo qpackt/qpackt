@@ -30,10 +30,7 @@ impl DaoInner {
     pub(super) fn init(path: &str) -> Self {
         let rw_url = format!("sqlite://{path}?mode=rwc");
         let ro_url = format!("sqlite://{path}?mode=ro");
-        Self {
-            rw_url: RwLock::new(rw_url),
-            ro_url: RwLock::new(ro_url),
-        }
+        Self { rw_url: RwLock::new(rw_url), ro_url: RwLock::new(ro_url) }
     }
     pub(super) async fn get_read_only_url(&self) -> RwLockReadGuard<'_, String> {
         self.ro_url.read().await

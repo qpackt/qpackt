@@ -26,11 +26,7 @@ use log::debug;
 use url::Url;
 
 /// Basic proxy handler (method agnostic).
-pub(crate) async fn proxy_handler(
-    payload: Payload,
-    client_request: HttpRequest,
-    versions: Data<Vec<VersionHandler>>,
-) -> HttpResponse {
+pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest, versions: Data<Vec<VersionHandler>>) -> HttpResponse {
     let destination = build_upstream_url(&client_request, &versions).await;
     debug!("Proxying request to {}", destination);
     build_response(payload, client_request.head(), destination).await
@@ -40,11 +36,7 @@ async fn build_response(payload: Payload, head: &RequestHead, destination: Url) 
     let proxy_request = build_request(head, destination);
     let upstream_response = proxy_request.send_stream(payload).await.unwrap();
     let mut proxy_response = HttpResponse::build(upstream_response.status());
-    for (header_name, header_value) in upstream_response
-        .headers()
-        .iter()
-        .filter(|(h, _)| *h != "connection")
-    {
+    for (header_name, header_value) in upstream_response.headers().iter().filter(|(h, _)| *h != "connection") {
         proxy_response.insert_header((header_name.clone(), header_value.clone()));
     }
     proxy_response.streaming(upstream_response)
@@ -52,9 +44,7 @@ async fn build_response(payload: Payload, head: &RequestHead, destination: Url) 
 
 fn build_request(head: &RequestHead, destination: Url) -> ClientRequest {
     let client = Client::default();
-    let proxy_request = client
-        .request_from(destination.as_str(), head)
-        .no_decompress();
+    let proxy_request = client.request_from(destination.as_str(), head).no_decompress();
     proxy_request
 }
 

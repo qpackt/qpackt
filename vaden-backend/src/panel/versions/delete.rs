@@ -38,17 +38,10 @@ pub(crate) async fn delete_version(
     debug!("Deleting version {}", name);
     match dao.delete_version(&name).await {
         Ok(path) => {
-            let path = app
-                .app_run_directory()
-                .join(VERSIONS_SUBDIRECTORY)
-                .join(path);
+            let path = app.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(path);
             if let Err(e) = fs::remove_dir_all(&path) {
-                warn!(
-                    "Unable to delete path {:?} for version {}: {}",
-                    path, name, e
-                );
-                HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(format!("Unable to delete: {}", e))
+                warn!("Unable to delete path {:?} for version {}: {}", path, name, e);
+                HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).body(format!("Unable to delete: {}", e))
             } else {
                 info!("Removed version {} and path {:?}", name, path);
                 HttpResponse::new(StatusCode::OK)
@@ -56,8 +49,7 @@ pub(crate) async fn delete_version(
         }
         Err(e) => {
             warn!("Unable to delete version {}: {}", name, e);
-            HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(format!("Unable to delete: {}", e))
+            HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).body(format!("Unable to delete: {}", e))
         }
     }
 }

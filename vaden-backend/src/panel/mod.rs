@@ -49,9 +49,7 @@ pub(super) fn start_panel_http(
                 .service(web::resource("/update-versions").route(web::post().to(update_versions)))
                 .service(web::resource("/upload-version").route(web::post().to(upload_version)))
                 .service(web::resource("/list-versions").route(web::get().to(list_versions)))
-                .service(
-                    web::resource("/delete-version/{name}").route(web::delete().to(delete_version)),
-                )
+                .service(web::resource("/delete-version/{name}").route(web::delete().to(delete_version)))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", "../vaden-frontend/dist").index_file("index.html"))
         })

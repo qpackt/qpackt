@@ -27,9 +27,7 @@ use scrypt::{
 pub(crate) fn hash_password(password: String) -> Result<String> {
     println!("Hashing password...");
     let salt = SaltString::generate(&mut OsRng);
-    let hash = Scrypt
-        .hash_password(password.as_bytes(), &salt)?
-        .to_string();
+    let hash = Scrypt.hash_password(password.as_bytes(), &salt)?.to_string();
     println!("Done hashing");
     Ok(hash)
 }

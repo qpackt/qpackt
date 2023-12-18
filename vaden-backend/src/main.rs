@@ -84,10 +84,7 @@ async fn main() {
 /// means either there was some problem with one of http server
 /// or some signal was received.
 /// SIGHUP is not supported yet.
-async fn wait(
-    panel_handle: JoinHandle<std::io::Result<()>>,
-    proxy_handle: JoinHandle<std::io::Result<()>>,
-) -> ! {
+async fn wait(panel_handle: JoinHandle<std::io::Result<()>>, proxy_handle: JoinHandle<std::io::Result<()>>) -> ! {
     let mut signal_interrupt = signal(SignalKind::interrupt()).unwrap();
     let mut signal_terminate = signal(SignalKind::terminate()).unwrap();
 
@@ -116,10 +113,7 @@ async fn start_http(
     config: Config,
     dao: Dao,
     versions: Vec<Version>,
-) -> (
-    JoinHandle<std::io::Result<()>>,
-    JoinHandle<std::io::Result<()>>,
-) {
+) -> (JoinHandle<std::io::Result<()>>, JoinHandle<std::io::Result<()>>) {
     let config = Data::new(config);
     let dao = Data::new(dao);
     let mut versions = build_version_handlers(versions);
@@ -135,25 +129,18 @@ async fn start_http(
 /// this version became inactive.
 async fn start_version_servers(handlers: &mut Vec<VersionHandler>, run_dir: &Path) {
     for handler in handlers {
-        info!(
-            "Starting version {} on port {}",
-            handler.version.name, handler.port
-        );
+        info!("Starting version {} on port {}", handler.version.name, handler.port);
         start_version_server(handler, run_dir).await;
     }
 }
 
 async fn start_version_server(version_handler: &mut VersionHandler, run_dir: &Path) {
-    let path = run_dir
-        .join(VERSIONS_SUBDIRECTORY)
-        .join(&version_handler.version.web_root);
+    let path = run_dir.join(VERSIONS_SUBDIRECTORY).join(&version_handler.version.web_root);
     let task = tokio::spawn({
-        HttpServer::new(move || {
-            App::new().service(Files::new("/", path.clone()).index_file("index.html"))
-        })
-        .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, version_handler.port))
-        .unwrap()
-        .run()
+        HttpServer::new(move || App::new().service(Files::new("/", path.clone()).index_file("index.html")))
+            .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, version_handler.port))
+            .unwrap()
+            .run()
     });
     version_handler.task = Some(task);
 }
@@ -183,20 +170,13 @@ fn ensure_app_dir_exists(path: &Path) -> Result<()> {
     if !path.exists() {
         create_app_dir(path)
     } else if !path.is_dir() {
-        Err(VadenError::InvalidConfig(format!(
-            "App dir is not a directory: {path:?}"
-        )))
+        Err(VadenError::InvalidConfig(format!("App dir is not a directory: {path:?}")))
     } else {
         Ok(())
     }
 }
 
 fn create_app_dir(path: &Path) -> Result<()> {
-    fs::create_dir_all(path).map_err(|e| {
-        VadenError::InvalidConfig(format!(
-            "Unable to create app directory {}: {}",
-            path.to_string_lossy(),
-            e
-        ))
-    })
+    fs::create_dir_all(path)
+        .map_err(|e| VadenError::InvalidConfig(format!("Unable to create app directory {}: {}", path.to_string_lossy(), e)))
 }

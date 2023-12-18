@@ -69,11 +69,7 @@ impl Config {
             &mut config,
             "{}: {}\r\n",
             RUN_DIR,
-            self.run_directory
-                .to_str()
-                .ok_or(VadenError::InvalidConfig(
-                    "Invalid run directory".to_string()
-                ))?
+            self.run_directory.to_str().ok_or(VadenError::InvalidConfig("Invalid run directory".to_string()))?
         )?;
         fs::write(path, config).await?;
         Ok(())
@@ -126,13 +122,7 @@ impl Config {
 }
 
 fn from_yaml(value: &str, yaml: &Yaml) -> Result<String> {
-    Ok(yaml[value]
-        .as_str()
-        .ok_or(VadenError::InvalidConfig(format!(
-            "Missing config value `{}`",
-            value
-        )))?
-        .to_string())
+    Ok(yaml[value].as_str().ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", value)))?.to_string())
 }
 
 fn read_stdin(prompt: &str) -> Result<String> {

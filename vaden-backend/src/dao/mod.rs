@@ -45,13 +45,9 @@ impl Dao {
     /// * base_dir: path for vaden.sqlite file.
     pub(crate) async fn init(base_dir: &Path) -> Result<Self> {
         let sqlite = base_dir.join(SQLITE_FILE);
-        let path = sqlite
-            .to_str()
-            .ok_or_else(|| VadenError::DatabaseError("Non-UTF-8 file system detected".into()))?;
+        let path = sqlite.to_str().ok_or_else(|| VadenError::DatabaseError("Non-UTF-8 file system detected".into()))?;
 
-        let dao = Self {
-            inner: Arc::new(DaoInner::init(path)),
-        };
+        let dao = Self { inner: Arc::new(DaoInner::init(path)) };
         dao.ensure_sqlite_initialized().await?;
         Ok(dao)
     }
@@ -64,15 +60,11 @@ impl Dao {
     pub(crate) async fn register_version(&self, web_root: &str, name: &str) -> Result<()> {
         info!("Registering new version. Name: {} Root: {}", name, web_root);
         let strategy = serde_json::to_string(&Strategy::Inactive).unwrap();
-        let q = sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
-            .bind(web_root)
-            .bind(name)
-            .bind(&strategy);
+        let q =
+            sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)").bind(web_root).bind(name).bind(&strategy);
         let url = self.inner.get_read_write_url().await;
         let mut connection = get_sqlite_connection(&url).await?;
-        q.execute(&mut connection)
-            .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        q.execute(&mut connection).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
     }
 
@@ -84,14 +76,10 @@ impl Dao {
         let q = sqlx::query("DELETE FROM versions WHERE name = $1 RETURNING web_root").bind(name);
         let url = self.inner.get_read_write_url().await;
         let mut connection = get_sqlite_connection(&url).await?;
-        let row = q
-            .fetch_optional(&mut connection)
-            .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        let row = q.fetch_optional(&mut connection).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         let row = row.ok_or_else(|| VadenError::DatabaseError("No such version".into()))?;
-        let path = row.try_get::<String, _>("web_root").map_err(|_| {
-            VadenError::DatabaseError("No column 'web_root' in versions table".into())
-        })?;
+        let path =
+            row.try_get::<String, _>("web_root").map_err(|_| VadenError::DatabaseError("No column 'web_root' in versions table".into()))?;
         Ok(path)
     }
 
@@ -105,28 +93,19 @@ impl Dao {
             .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         let mut versions = Vec::with_capacity(rows.len());
         for row in rows {
-            let name = row.try_get::<String, _>("name").map_err(|_| {
-                VadenError::DatabaseError("No column 'name' in versions table".into())
-            })?;
-            let web_root = row.try_get::<String, _>("web_root").map_err(|_| {
-                VadenError::DatabaseError("No column 'web_root' in versions table".into())
-            })?;
+            let name =
+                row.try_get::<String, _>("name").map_err(|_| VadenError::DatabaseError("No column 'name' in versions table".into()))?;
+            let web_root = row
+                .try_get::<String, _>("web_root")
+                .map_err(|_| VadenError::DatabaseError("No column 'web_root' in versions table".into()))?;
             let web_root = PathBuf::from(web_root);
-            let strategy = row.try_get::<String, _>("strategy").map_err(|_| {
-                VadenError::DatabaseError("No column 'strategy' in versions table".into())
-            })?;
+            let strategy = row
+                .try_get::<String, _>("strategy")
+                .map_err(|_| VadenError::DatabaseError("No column 'strategy' in versions table".into()))?;
 
-            let strategy = serde_json::from_str::<Strategy>(&strategy).map_err(|_| {
-                VadenError::DatabaseError(format!(
-                    "Unable to deserialize strategy '{}' from json",
-                    strategy
-                ))
-            })?;
-            versions.push(Version {
-                name,
-                web_root,
-                strategy,
-            })
+            let strategy = serde_json::from_str::<Strategy>(&strategy)
+                .map_err(|_| VadenError::DatabaseError(format!("Unable to deserialize strategy '{}' from json", strategy)))?;
+            versions.push(Version { name, web_root, strategy })
         }
         Ok(versions)
     }
@@ -135,30 +114,19 @@ impl Dao {
     pub(crate) async fn save_versions(&self, versions: &[Version]) -> Result<()> {
         let url = self.inner.get_read_write_url().await;
         let mut conn = get_sqlite_connection(&url).await?;
-        let mut transaction = conn
-            .begin()
-            .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        let mut transaction = conn.begin().await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         let q = sqlx::query("DELETE FROM versions");
-        q.execute(&mut *transaction)
-            .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        q.execute(&mut *transaction).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         for version in versions {
             let web_root = version.web_root.to_str().unwrap();
             let strategy = serde_json::to_string(&version.strategy).unwrap();
-            let q =
-                sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
-                    .bind(web_root)
-                    .bind(&version.name)
-                    .bind(&strategy);
-            q.execute(&mut *transaction)
-                .await
-                .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+            let q = sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
+                .bind(web_root)
+                .bind(&version.name)
+                .bind(&strategy);
+            q.execute(&mut *transaction).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         }
-        transaction
-            .commit()
-            .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        transaction.commit().await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
     }
 
@@ -166,10 +134,7 @@ impl Dao {
     async fn ensure_sqlite_initialized(&self) -> Result<()> {
         let url = self.inner.get_read_write_url().await;
         let mut conn = get_sqlite_connection(&url).await?;
-        sqlx::migrate!("db/migrations")
-            .run(&mut conn)
-            .await
-            .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        sqlx::migrate!("db/migrations").run(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
     }
 }
@@ -182,7 +147,5 @@ pub struct Version {
 }
 
 async fn get_sqlite_connection(url: &str) -> Result<SqliteConnection> {
-    SqliteConnection::connect(url)
-        .await
-        .map_err(|e| VadenError::DatabaseError(e.to_string()))
+    SqliteConnection::connect(url).await.map_err(|e| VadenError::DatabaseError(e.to_string()))
 }

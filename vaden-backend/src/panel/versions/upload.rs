@@ -37,11 +37,7 @@ use std::time::SystemTime;
 
 /// Uploads new site's version as a zip file, unpacks it and registers in database.
 /// The site can be served after the upload.
-pub(crate) async fn upload_version(
-    payload: Multipart,
-    config: Data<Config>,
-    dao: Data<Dao>,
-) -> HttpResponse {
+pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao: Data<Dao>) -> HttpResponse {
     match serve_request(payload, config, dao).await {
         Ok(name) => {
             info!("Registered new version: {}", name);
@@ -54,18 +50,12 @@ pub(crate) async fn upload_version(
     }
 }
 
-async fn serve_request(
-    mut payload: Multipart,
-    config: Data<Config>,
-    dao: Data<Dao>,
-) -> Result<String> {
+async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<Dao>) -> Result<String> {
     let field = payload
         .try_next()
         .await
         .map_err(|e| VadenError::MultipartUploadError(e.to_string()))?
-        .ok_or_else(|| {
-            VadenError::MultipartUploadError("No `next` field in multipart request".into())
-        })?;
+        .ok_or_else(|| VadenError::MultipartUploadError("No `next` field in multipart request".into()))?;
     save_site(field, &config.into_inner(), &dao.into_inner()).await
 }
 
@@ -78,25 +68,15 @@ async fn save_site(field: Field, config: &Config, dao: &Dao) -> Result<String> {
 }
 
 fn create_path(config: &Config, date_time_str: &str) -> Result<PathBuf> {
-    let path = config
-        .app_run_directory()
-        .join(VERSIONS_SUBDIRECTORY)
-        .join(date_time_str);
+    let path = config.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(date_time_str);
     fs::create_dir_all(&path)?;
     Ok(path)
 }
 
 fn create_name() -> String {
     let time: DateTime<Utc> = DateTime::from(SystemTime::now());
-    let date_time_str = format!(
-        "{}_{:02}_{:02}__{:02}_{:02}_{:02}",
-        time.year(),
-        time.month(),
-        time.day(),
-        time.hour(),
-        time.minute(),
-        time.second()
-    );
+    let date_time_str =
+        format!("{}_{:02}_{:02}__{:02}_{:02}_{:02}", time.year(), time.month(), time.day(), time.hour(), time.minute(), time.second());
     date_time_str
 }
 
@@ -110,19 +90,11 @@ async fn wait_for_content(mut field: Field, target: &Path) -> Result<PathBuf> {
     Ok(zip_path)
 }
 
-async fn unzip_and_register(
-    zip_path: &Path,
-    target: &Path,
-    name: &str,
-    app_run_dir: &Path,
-    dao: &Dao,
-) -> Result<()> {
+async fn unzip_and_register(zip_path: &Path, target: &Path, name: &str, app_run_dir: &Path, dao: &Dao) -> Result<()> {
     let web_root = unzip_site(zip_path, target)?;
     let web_root = web_root
         .strip_prefix(app_run_dir.join(VERSIONS_SUBDIRECTORY))
-        .map_err(|e| {
-            VadenError::UnableToProcessSite(format!("unable to strip site prefix: {}", e))
-        })?;
+        .map_err(|e| VadenError::UnableToProcessSite(format!("unable to strip site prefix: {}", e)))?;
     dao.register_version(web_root.to_str().unwrap(), name).await
 }
 
@@ -147,15 +119,10 @@ fn find_web_root(target: &Path) -> Result<PathBuf> {
 }
 
 fn unzip_site(path: &Path, target: &Path) -> Result<PathBuf> {
-    let file = File::open(path)
-        .map_err(|e| VadenError::UnableToProcessSite(format!("unable to open site file: {}", e)))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| VadenError::UnableToProcessSite(format!("unable to read zip: {}", e)))?;
-    archive
-        .extract(target)
-        .map_err(|e| VadenError::UnableToProcessSite(format!("unable to unzip: {}", e)))?;
-    remove_file(path)
-        .map_err(|e| VadenError::UnableToProcessSite(format!("unable to unzip: {}", e)))?;
+    let file = File::open(path).map_err(|e| VadenError::UnableToProcessSite(format!("unable to open site file: {}", e)))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| VadenError::UnableToProcessSite(format!("unable to read zip: {}", e)))?;
+    archive.extract(target).map_err(|e| VadenError::UnableToProcessSite(format!("unable to unzip: {}", e)))?;
+    remove_file(path).map_err(|e| VadenError::UnableToProcessSite(format!("unable to unzip: {}", e)))?;
     let web_root = find_web_root(target)?;
     Ok(web_root)
 }
