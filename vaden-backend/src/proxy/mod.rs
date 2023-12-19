@@ -18,15 +18,14 @@
 */
 
 use crate::proxy::handler::proxy_handler;
-use crate::VersionHandler;
+use crate::server::Versions;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpServer};
-use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
 pub(super) mod handler;
 
-pub(super) fn start_proxy_http(addr: &str, versions: Data<RwLock<Vec<VersionHandler>>>) -> JoinHandle<std::io::Result<()>> {
+pub(super) fn start_proxy_http(addr: &str, versions: Data<Versions>) -> JoinHandle<std::io::Result<()>> {
     tokio::spawn(
         HttpServer::new(move || App::new().app_data(versions.clone()).default_service(web::to(proxy_handler))).bind(addr).unwrap().run(),
     )

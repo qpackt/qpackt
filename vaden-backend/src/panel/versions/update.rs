@@ -18,13 +18,12 @@
 */
 use crate::dao::Dao;
 use crate::manager::strategy::Strategy;
-use crate::VersionHandler;
+use crate::server::Versions;
 use actix_web::web::Data;
 use actix_web::{web, HttpResponse};
 use awc::http::StatusCode;
 use log::{debug, error, info};
 use serde::Deserialize;
-use tokio::sync::RwLock;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct VersionRequest {
@@ -38,7 +37,7 @@ pub(crate) struct VersionRequest {
 /// * Update handlers to be used for actual traffic split
 pub(crate) async fn update_versions(
     web::Json(requests): web::Json<Vec<VersionRequest>>,
-    versions: Data<RwLock<Vec<VersionHandler>>>,
+    versions: Data<Versions>,
     dao: Data<Dao>,
 ) -> HttpResponse {
     debug!("Received versions update: {:?}", requests);
@@ -62,15 +61,7 @@ pub(crate) async fn update_versions(
         error!("Unable to save new site's versions: {}", e);
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     }
-    let mut versions = versions.write().await;
-    for current_version in &mut current {
-        for handler in versions.iter_mut() {
-            if handler.version.name == current_version.name {
-                handler.version.strategy = current_version.strategy.clone();
-                break;
-            }
-        }
-    }
+    versions.update_strategies(&current).await;
     info!("Saved new site's versions: {:?}", current);
     HttpResponse::new(StatusCode::OK)
 }

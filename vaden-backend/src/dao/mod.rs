@@ -22,7 +22,6 @@ mod inner;
 use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};
 use crate::manager::strategy::Strategy;
-use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
@@ -52,16 +51,13 @@ impl Dao {
         Ok(dao)
     }
 
-    /// Registers new version of the site in database. By default the new version is 'Inactive', i.e. will not get any traffic.
-    ///
-    /// Args:
-    /// * web_root - full path to where the files are stored
-    /// * name - name of the version
-    pub(crate) async fn register_version(&self, web_root: &str, name: &str) -> Result<()> {
-        info!("Registering new version. Name: {} Root: {}", name, web_root);
-        let strategy = serde_json::to_string(&Strategy::Inactive).unwrap();
-        let q =
-            sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)").bind(web_root).bind(name).bind(&strategy);
+    /// Registers new version of the site in database.
+    pub(crate) async fn register_version(&self, version: &Version) -> Result<()> {
+        let strategy = serde_json::to_string(&version.strategy).unwrap();
+        let q = sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
+            .bind(version.web_root.to_str().unwrap())
+            .bind(&version.name)
+            .bind(&strategy);
         let url = self.inner.get_read_write_url().await;
         let mut connection = get_sqlite_connection(&url).await?;
         q.execute(&mut connection).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;

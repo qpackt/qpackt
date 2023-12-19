@@ -20,24 +20,19 @@
 use crate::config::Config;
 use crate::constants::VERSIONS_SUBDIRECTORY;
 use crate::dao::Dao;
-use crate::VersionHandler;
+use crate::server::Versions;
 use actix_web::web::{Data, Path};
 use actix_web::HttpResponse;
 use awc::http::StatusCode;
 use log::{debug, info, warn};
 use std::fs;
-use tokio::sync::RwLock;
 
 /// Deletes site's version from file system and the database.
-pub(crate) async fn delete_version(
-    name: Path<String>,
-    dao: Data<Dao>,
-    app: Data<Config>,
-    versions: Data<RwLock<Vec<VersionHandler>>>,
-) -> HttpResponse {
+pub(crate) async fn delete_version(name: Path<String>, dao: Data<Dao>, app: Data<Config>, versions: Data<Versions>) -> HttpResponse {
     debug!("Deleting version {}", name);
     match dao.delete_version(&name).await {
         Ok(path) => {
+            versions.delete_version(&name).await;
             let path = app.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(path);
             if let Err(e) = fs::remove_dir_all(&path) {
                 warn!("Unable to delete path {:?} for version {}: {}", path, name, e);

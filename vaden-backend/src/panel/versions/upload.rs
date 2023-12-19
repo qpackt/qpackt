@@ -19,9 +19,11 @@
 
 use crate::config::Config;
 use crate::constants::VERSIONS_SUBDIRECTORY;
-use crate::dao::Dao;
+use crate::dao::{Dao, Version};
 use crate::error::Result;
 use crate::error::VadenError;
+use crate::manager::strategy::Strategy;
+use crate::server::Versions;
 use actix_multipart::{Field, Multipart};
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
@@ -37,8 +39,8 @@ use std::time::SystemTime;
 
 /// Uploads new site's version as a zip file, unpacks it and registers in database.
 /// The site can be served after the upload.
-pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao: Data<Dao>) -> HttpResponse {
-    match serve_request(payload, config, dao).await {
+pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> HttpResponse {
+    match serve_request(payload, config, dao, versions).await {
         Ok(name) => {
             info!("Registered new version: {}", name);
             HttpResponse::Accepted().finish()
@@ -50,21 +52,23 @@ pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao
     }
 }
 
-async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<Dao>) -> Result<String> {
+async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> Result<String> {
     let field = payload
         .try_next()
         .await
         .map_err(|e| VadenError::MultipartUploadError(e.to_string()))?
         .ok_or_else(|| VadenError::MultipartUploadError("No `next` field in multipart request".into()))?;
-    save_site(field, &config.into_inner(), &dao.into_inner()).await
+    let version = save_version(field, &config.clone().into_inner(), &dao.into_inner()).await?;
+    let name = version.name.clone();
+    versions.add_version(version, config.into_inner().app_run_directory()).await;
+    Ok(name)
 }
 
-async fn save_site(field: Field, config: &Config, dao: &Dao) -> Result<String> {
+async fn save_version(field: Field, config: &Config, dao: &Dao) -> Result<Version> {
     let name = create_name();
     let target = create_path(config, &name)?;
     let zip_path = wait_for_content(field, &target).await?;
-    unzip_and_register(&zip_path, &target, &name, config.app_run_directory(), dao).await?;
-    Ok(name)
+    unzip_and_register(&zip_path, &target, name, config.app_run_directory(), dao).await
 }
 
 fn create_path(config: &Config, date_time_str: &str) -> Result<PathBuf> {
@@ -90,12 +94,14 @@ async fn wait_for_content(mut field: Field, target: &Path) -> Result<PathBuf> {
     Ok(zip_path)
 }
 
-async fn unzip_and_register(zip_path: &Path, target: &Path, name: &str, app_run_dir: &Path, dao: &Dao) -> Result<()> {
+async fn unzip_and_register(zip_path: &Path, target: &Path, name: String, app_run_dir: &Path, dao: &Dao) -> Result<Version> {
     let web_root = unzip_site(zip_path, target)?;
     let web_root = web_root
         .strip_prefix(app_run_dir.join(VERSIONS_SUBDIRECTORY))
         .map_err(|e| VadenError::UnableToProcessSite(format!("unable to strip site prefix: {}", e)))?;
-    dao.register_version(web_root.to_str().unwrap(), name).await
+    let version = Version { name, web_root: web_root.to_path_buf(), strategy: Strategy::Inactive };
+    dao.register_version(&version).await?;
+    Ok(version)
 }
 
 /// Check if there is only one directory in the target dir. If so, it will become web root path.
