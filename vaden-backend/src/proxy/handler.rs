@@ -17,40 +17,82 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::server::VersionServer;
+use crate::server::Versions;
+use actix_web::cookie::Cookie;
 use actix_web::dev::RequestHead;
 use actix_web::web::{Data, Payload};
 use actix_web::{HttpRequest, HttpResponse};
+use awc::cookie::time::{Duration, OffsetDateTime};
 use awc::{Client, ClientRequest};
 use log::debug;
+use rand::{thread_rng, RngCore};
+use std::ops::Add;
 use url::Url;
 
+/// A cookie that is used to recognize which version was served to the client in previous requests.
+/// If no cookie is set then assume it's the first request and use [Strategy] to decide which version will be served
+/// from now on.
+const VADEN_COOKIE_NAME: &str = "VADEN_SERVER";
+
 /// Basic proxy handler (method agnostic).
-pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest, versions: Data<Vec<VersionServer>>) -> HttpResponse {
-    let destination = build_upstream_url(&client_request, &versions).await;
-    debug!("Proxying request to {}", destination);
-    build_response(payload, client_request.head(), destination).await
+/// Finds cookie in client's request and previously set url.
+/// If not found, then creates a new cookie and picks url from [Versions]
+pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
+    let previous_url = previous_url(&client_request, &versions).await;
+    match previous_url {
+        None => proxy_to_new(payload, client_request, versions).await,
+        Some(url) => proxy_to_previous(payload, client_request, url).await,
+    }
 }
 
-async fn build_response(payload: Payload, head: &RequestHead, destination: Url) -> HttpResponse {
+async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
+    let cookie = create_new_cookie();
+    let found = versions.get_upstream(client_request.query_string()).await.unwrap();
+    versions.save_cookie_url(cookie.value(), found.clone()).await;
+    debug!("Proxying request to {}", found);
+    build_response(payload, client_request.head(), found, Some(cookie)).await
+}
+
+async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: Url) -> HttpResponse {
+    let destination = build_upstream_url(&client_request, url).await;
+    debug!("Proxying request to {}", destination);
+    build_response(payload, client_request.head(), destination, None).await
+}
+
+async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> Option<Url> {
+    if let Some(cookie) = request.cookie(VADEN_COOKIE_NAME) {
+        versions.get_url_for_cookie(cookie.value()).await
+    } else {
+        None
+    }
+}
+
+async fn build_response(payload: Payload, head: &RequestHead, destination: Url, cookie: Option<Cookie<'_>>) -> HttpResponse {
     let proxy_request = build_request(head, destination);
     let upstream_response = proxy_request.send_stream(payload).await.unwrap();
     let mut proxy_response = HttpResponse::build(upstream_response.status());
     for (header_name, header_value) in upstream_response.headers().iter().filter(|(h, _)| *h != "connection") {
         proxy_response.insert_header((header_name.clone(), header_value.clone()));
     }
+    if let Some(cookie) = cookie {
+        proxy_response.cookie(cookie);
+    }
     proxy_response.streaming(upstream_response)
+}
+
+fn create_new_cookie() -> Cookie<'static> {
+    let mut cookie = Cookie::new(VADEN_COOKIE_NAME, format!("{}", thread_rng().next_u64()));
+    cookie.set_expires(OffsetDateTime::now_utc().add(Duration::days(7)));
+    cookie
 }
 
 fn build_request(head: &RequestHead, destination: Url) -> ClientRequest {
     let client = Client::default();
-    let proxy_request = client.request_from(destination.as_str(), head).no_decompress();
-    proxy_request
+    client.request_from(destination.as_str(), head).no_decompress()
 }
 
-async fn build_upstream_url(client_request: &HttpRequest, versions: &[VersionServer]) -> Url {
-    let mut destination = versions[0].upstream.clone();
-    destination.set_path(client_request.uri().path());
-    destination.set_query(client_request.uri().query());
-    destination
+async fn build_upstream_url(client_request: &HttpRequest, mut url: Url) -> Url {
+    url.set_path(client_request.uri().path());
+    url.set_query(client_request.uri().query());
+    url
 }

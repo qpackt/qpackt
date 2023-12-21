@@ -2,7 +2,8 @@ use crate::constants::VERSIONS_SUBDIRECTORY;
 use crate::dao::Version;
 use actix_files::Files;
 use actix_web::{App, HttpServer};
-use log::{info, warn};
+use log::{debug, info, warn};
+use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
 use tokio::sync::RwLock;
@@ -15,6 +16,7 @@ const START_PORT: u16 = 9000;
 /// Contains details for various versions' servers.  
 pub(crate) struct Versions {
     versions: RwLock<Vec<VersionServer>>,
+    cookie_map: RwLock<HashMap<String, Url>>,
 }
 
 pub(crate) struct VersionServer {
@@ -29,7 +31,12 @@ impl Versions {
     pub(super) async fn start(versions: Vec<Version>, run_dir: &Path) -> Self {
         let mut versions = build_version_servers(versions);
         start_version_servers(&mut versions, run_dir).await;
-        Self { versions: RwLock::new(versions) }
+        Self { versions: RwLock::new(versions), cookie_map: RwLock::new(Default::default()) }
+    }
+
+    pub(crate) async fn get_upstream(&self, query: &str) -> Option<Url> {
+        let versions = self.versions.read().await;
+        versions.get(0).map(|v| v.upstream.clone())
     }
 
     pub(super) async fn update_strategies(&self, new: &[Version]) {
@@ -66,6 +73,13 @@ impl Versions {
         start_version_server(&mut server, run_dir).await;
         versions.push(server);
     }
+
+    pub(super) async fn get_url_for_cookie(&self, cookie: &str) -> Option<Url> {
+        let lock = self.cookie_map.read().await;
+        lock.get(cookie).cloned()
+    }
+
+    pub(super) async fn save_cookie_url(&self, value: &str, url: Url) {}
 }
 
 /// Starts a normal 'Files' server to serve a version.
