@@ -1,8 +1,11 @@
 use crate::constants::VERSIONS_SUBDIRECTORY;
 use crate::dao::Version;
+use crate::error::{Result, VadenError};
+use crate::manager::strategy::Strategy;
 use actix_files::Files;
 use actix_web::{App, HttpServer};
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
@@ -34,9 +37,22 @@ impl Versions {
         Self { versions: RwLock::new(versions), cookie_map: RwLock::new(Default::default()) }
     }
 
-    pub(crate) async fn get_upstream(&self, query: &str) -> Option<Url> {
+    /// Tries to get a new url for request based on [Strategy] and request query.
+    pub(super) async fn get_upstream(&self, _query: &str) -> Result<Url> {
         let versions = self.versions.read().await;
-        versions.get(0).map(|v| v.upstream.clone())
+        let sum_weights = versions.iter().map(|v| if let Strategy::Weight(w) = v.version.strategy { w } else { 0.0 }).sum::<f32>();
+        let mut cut = thread_rng().gen_range(0.0..sum_weights);
+        for v in versions.iter() {
+            if let Strategy::Weight(w) = v.version.strategy {
+                cut -= w;
+                if cut <= 0.0 {
+                    debug!("Picking version {} by Weight", v.version.name);
+                    return Ok(v.upstream.clone());
+                }
+            }
+        }
+        error!("Unable to find working version");
+        Err(VadenError::ProxyError)
     }
 
     pub(super) async fn update_strategies(&self, new: &[Version]) {

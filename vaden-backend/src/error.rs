@@ -39,7 +39,6 @@ pub(crate) enum VadenError {
     #[error("unable to read YAML {0}")]
     UnableToReadYaml(#[from] yaml_rust::ScanError),
 
-    #[allow(dead_code)] // TODO remove
     #[error("unable to proxy request")]
     ProxyError,
 

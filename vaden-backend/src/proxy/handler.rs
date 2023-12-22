@@ -23,6 +23,7 @@ use actix_web::dev::RequestHead;
 use actix_web::web::{Data, Payload};
 use actix_web::{HttpRequest, HttpResponse};
 use awc::cookie::time::{Duration, OffsetDateTime};
+use awc::http::StatusCode;
 use awc::{Client, ClientRequest};
 use log::debug;
 use rand::{thread_rng, RngCore};
@@ -46,8 +47,10 @@ pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest,
 }
 
 async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
+    let Ok(found) = versions.get_upstream(client_request.query_string()).await else {
+        return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
+    };
     let cookie = create_new_cookie();
-    let found = versions.get_upstream(client_request.query_string()).await.unwrap();
     versions.save_cookie_url(cookie.value(), found.clone()).await;
     debug!("Proxying request to {}", found);
     build_response(payload, client_request.head(), found, Some(cookie)).await
@@ -60,11 +63,8 @@ async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: U
 }
 
 async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> Option<Url> {
-    if let Some(cookie) = request.cookie(VADEN_COOKIE_NAME) {
-        versions.get_url_for_cookie(cookie.value()).await
-    } else {
-        None
-    }
+    let cookie = request.cookie(VADEN_COOKIE_NAME)?;
+    versions.get_url_for_cookie(cookie.value()).await
 }
 
 async fn build_response(payload: Payload, head: &RequestHead, destination: Url, cookie: Option<Cookie<'_>>) -> HttpResponse {
@@ -77,6 +77,7 @@ async fn build_response(payload: Payload, head: &RequestHead, destination: Url, 
     if let Some(cookie) = cookie {
         proxy_response.cookie(cookie);
     }
+    // TODO add "no cache"
     proxy_response.streaming(upstream_response)
 }
 
