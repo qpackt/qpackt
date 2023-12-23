@@ -42,7 +42,7 @@ pub enum Strategy {
     /// * version2 - weight 10
     /// * version3 - inactive
     /// version1 and version2 will get 50% of traffic. version3 will not get any traffic.
-    Weight(f32), // TODO change to integer
+    Weight(u16),
     /// Sends new sessions that have given url param set to given value
     UrlParam(String, String), // TODO change to single String
 }

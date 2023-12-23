@@ -40,12 +40,12 @@ impl Versions {
     /// Tries to get a new url for request based on [Strategy] and request query.
     pub(super) async fn get_upstream(&self, _query: &str) -> Result<Url> {
         let versions = self.versions.read().await;
-        let sum_weights = versions.iter().map(|v| if let Strategy::Weight(w) = v.version.strategy { w } else { 0.0 }).sum::<f32>();
-        let mut cut = thread_rng().gen_range(0.0..sum_weights);
+        let sum_weights = versions.iter().map(|v| if let Strategy::Weight(w) = v.version.strategy { w as i32 } else { 0 }).sum::<i32>();
+        let mut cut = thread_rng().gen_range(0..sum_weights + 1);
         for v in versions.iter() {
             if let Strategy::Weight(w) = v.version.strategy {
-                cut -= w;
-                if cut <= 0.0 {
+                cut -= w as i32;
+                if cut <= 0 {
                     debug!("Picking version {} by Weight", v.version.name);
                     return Ok(v.upstream.clone());
                 }
