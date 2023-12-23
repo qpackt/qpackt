@@ -51,7 +51,7 @@ async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: D
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     };
     let cookie = create_new_cookie();
-    versions.save_cookie_url(cookie.value(), found.clone()).await;
+    versions.save_cookie_url(cookie.value().to_owned(), found.clone()).await;
     debug!("Proxying request to {}", found);
     build_response(payload, client_request.head(), found, Some(cookie)).await
 }

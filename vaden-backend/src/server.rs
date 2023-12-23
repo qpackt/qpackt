@@ -95,7 +95,10 @@ impl Versions {
         lock.get(cookie).cloned()
     }
 
-    pub(super) async fn save_cookie_url(&self, value: &str, url: Url) {}
+    pub(super) async fn save_cookie_url(&self, value: String, url: Url) {
+        let mut lock = self.cookie_map.write().await;
+        lock.insert(value, url);
+    }
 }
 
 /// Starts a normal 'Files' server to serve a version.
