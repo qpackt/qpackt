@@ -27,15 +27,13 @@ import {updateVersion} from "../state.js";
   const props = defineProps(['strategy', 'name']);
   const selection = ref('');
   const urlParam = ref('');
-  const urlValue = ref('');
   const weight = ref(0);
   onMounted(() => {
     if (props.strategy === 'Inactive') {
       selection.value = 'Inactive'
     } else if (props.strategy.UrlParam !== undefined) {
       selection.value = 'UrlParam'
-      urlParam.value = props.strategy.UrlParam[0]
-      urlValue.value = props.strategy.UrlParam[1]
+      urlParam.value = props.strategy.UrlParam
     } else {
       selection.value = 'Weight'
       weight.value = props.strategy.Weight
@@ -45,7 +43,7 @@ import {updateVersion} from "../state.js";
   function emitCurrent() {
     let value = 'Inactive'
     if (selection.value === 'UrlParam') {
-      value = {"UrlParam": [urlParam.value,urlValue.value]}
+      value = {"UrlParam": urlParam.value}
     }
     if (selection.value === 'Weight') {
       value = {"Weight": weight.value}
@@ -70,7 +68,6 @@ import {updateVersion} from "../state.js";
         <RadioButton v-model="selection" inputId="UrlParam" name="selection" value="UrlParam" @change="emitCurrent"/>
         <label for="ingredient3" class="ml-2">UrlParam</label>
         <InputText type="text" v-model="urlParam" :disabled="selection !== 'UrlParam'" @focusout="emitCurrent"/>
-        <InputText type="text" v-model="urlValue" :disabled="selection !== 'UrlParam'" @focusout="emitCurrent"/>
 
     </div>
   </div>

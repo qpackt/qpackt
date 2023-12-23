@@ -22,13 +22,14 @@ use serde::{Deserialize, Serialize};
 Deserialize to:
 "Inactive"
 {"Weight":20.0}
-{"UrlParam":["source","ad"]}
+{"UrlParam":"param"}
  */
 /// Traffic split strategy.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(variant_size_differences)]
 pub enum Strategy {
     /// No new traffic send to this version. Used as default for a new [Version]
+    // TODO remove completely. Use Weight(0) to indicate inactive versions.
     Inactive,
     /// Calculate percent of sessions based on the total sum of all weights.
     /// Only 'Weight' strategies are counted towards the total sum.
@@ -40,9 +41,9 @@ pub enum Strategy {
     /// Example:
     /// * version1 - weight 10
     /// * version2 - weight 10
-    /// * version3 - inactive
+    /// * version3 - weight 0
     /// version1 and version2 will get 50% of traffic. version3 will not get any traffic.
     Weight(u16),
-    /// Sends new sessions that have given url param set to given value
-    UrlParam(String, String), // TODO change to single String
+    /// Matches new sessions that have url query containing the string.
+    UrlParam(String),
 }
