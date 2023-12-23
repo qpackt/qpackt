@@ -38,9 +38,22 @@ impl Versions {
     }
 
     /// Tries to get a new url for request based on [Strategy] and request query.
-    pub(super) async fn get_upstream(&self, _query: &str) -> Result<Url> {
+    /// First try url param matching,
+    /// Then calculate total weights and pick some version proportionally.
+    pub(super) async fn get_upstream(&self, query: &str) -> Result<Url> {
         let versions = self.versions.read().await;
+        // Try UrlParam matching first.
+        for v in versions.iter() {
+            if let Strategy::UrlParam(needle) = &v.version.strategy {
+                if query.contains(needle) {
+                    debug!("Picking version {} by UrlParam (needle: {}, query: {})", v.version.name, needle, query);
+                    return Ok(v.upstream.clone());
+                }
+            }
+        }
+        // Add up all weights.
         let sum_weights = versions.iter().map(|v| if let Strategy::Weight(w) = v.version.strategy { w as i32 } else { 0 }).sum::<i32>();
+        // Pick some version proportionally.
         let mut cut = thread_rng().gen_range(0..sum_weights + 1);
         for v in versions.iter() {
             if let Strategy::Weight(w) = v.version.strategy {
