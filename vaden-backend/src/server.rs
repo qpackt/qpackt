@@ -115,8 +115,6 @@ impl Versions {
 }
 
 /// Starts a normal 'Files' server to serve a version.
-/// Doesn't check for 'Inactive' strategy because there may be sessions using this version and started before
-/// this version became inactive.
 async fn start_version_servers(handlers: &mut Vec<VersionServer>, run_dir: &Path) {
     for handler in handlers {
         info!("Starting version {} on port {}", handler.version.name, handler.port);

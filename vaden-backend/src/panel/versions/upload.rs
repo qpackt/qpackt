@@ -99,7 +99,7 @@ async fn unzip_and_register(zip_path: &Path, target: &Path, name: String, app_ru
     let web_root = web_root
         .strip_prefix(app_run_dir.join(VERSIONS_SUBDIRECTORY))
         .map_err(|e| VadenError::UnableToProcessSite(format!("unable to strip site prefix: {}", e)))?;
-    let version = Version { name, web_root: web_root.to_path_buf(), strategy: Strategy::Inactive };
+    let version = Version { name, web_root: web_root.to_path_buf(), strategy: Strategy::Weight(0) };
     dao.register_version(&version).await?;
     Ok(version)
 }

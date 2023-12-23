@@ -20,7 +20,6 @@
 use serde::{Deserialize, Serialize};
 /*
 Deserialize to:
-"Inactive"
 {"Weight":20.0}
 {"UrlParam":"param"}
  */
@@ -28,9 +27,6 @@ Deserialize to:
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(variant_size_differences)]
 pub enum Strategy {
-    /// No new traffic send to this version. Used as default for a new [Version]
-    // TODO remove completely. Use Weight(0) to indicate inactive versions.
-    Inactive,
     /// Calculate percent of sessions based on the total sum of all weights.
     /// Only 'Weight' strategies are counted towards the total sum.
     /// Example:
