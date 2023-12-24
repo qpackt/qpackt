@@ -28,7 +28,7 @@ use awc::{Client, ClientRequest};
 use log::{debug, error};
 use rand::{thread_rng, RngCore};
 use std::fmt::{Display, Formatter};
-use std::ops::Add;
+use std::ops::{Add, Deref};
 use std::sync::Arc;
 use url::Url;
 
@@ -61,7 +61,7 @@ pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest,
     };
     match previous_url {
         None => proxy_to_new(payload, client_request, versions).await,
-        Some(url) => proxy_to_previous(payload, client_request, url).await,
+        Some(url) => proxy_to_previous(payload, client_request, url.deref().clone()).await,
     }
 }
 
@@ -74,8 +74,8 @@ async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: D
         error!("Unable to save cookie: {}", e);
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     }
-    // debug!("Proxying request to {}", url);
-    build_response(payload, client_request.head(), url, Some(cookie)).await
+    debug!("Proxying request to {}", url);
+    build_response(payload, client_request.head(), url.deref().clone(), Some(cookie)).await
 }
 
 async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: Url) -> HttpResponse {
@@ -84,7 +84,7 @@ async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: U
     build_response(payload, client_request.head(), destination, None).await
 }
 
-async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> crate::error::Result<Option<Url>> {
+async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> crate::error::Result<Option<Arc<Url>>> {
     let Some(cookie) = request.cookie(VADEN_COOKIE_NAME) else {
         return Ok(None);
     };

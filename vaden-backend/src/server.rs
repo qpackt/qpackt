@@ -10,6 +10,7 @@ use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use url::Url;
@@ -20,14 +21,14 @@ const START_PORT: u16 = 9000;
 /// Contains details for various versions' servers.  
 pub(crate) struct Versions {
     versions: RwLock<Vec<VersionServer>>,
-    cookie_map: RwLock<HashMap<CookieValue, Url>>,
+    cookie_map: RwLock<HashMap<CookieValue, Arc<Url>>>,
     dao: Dao,
 }
 
 pub(crate) struct VersionServer {
     pub(crate) version: Version,
     port: u16,
-    upstream: Url,
+    upstream: Arc<Url>,
     task: Option<JoinHandle<std::io::Result<()>>>,
 }
 
@@ -41,7 +42,7 @@ impl Versions {
     /// Tries to pick a new [Url] and [VersionName] for request based on [Strategy] and request query.
     /// First try url param matching,
     /// Then calculate total weights and pick some version proportionally.
-    pub(super) async fn pick_upstream(&self, query: &str) -> Result<(Url, VersionName)> {
+    pub(super) async fn pick_upstream(&self, query: &str) -> Result<(Arc<Url>, VersionName)> {
         let versions = self.versions.read().await;
         // Try UrlParam matching first.
         for v in versions.iter() {
@@ -109,7 +110,7 @@ impl Versions {
     /// Gets [Url] for cookie from cookie_map.
     /// If not found in cookie_map then reaches database to read saved [VersionName],
     /// maps version name to url and saves url in cookie map for future searches.
-    pub(super) async fn get_url_for_cookie(&self, cookie: &CookieValue) -> Result<Option<Url>> {
+    pub(super) async fn get_url_for_cookie(&self, cookie: &CookieValue) -> Result<Option<Arc<Url>>> {
         let lock = self.cookie_map.read().await;
         if let Some(url) = lock.get(cookie) {
             return Ok(Some(url.clone()));
@@ -140,7 +141,7 @@ impl Versions {
     /// Saves cookie value:
     /// - [VersionName] in database (to be read after restart)
     /// - [Url] in a HashMap (to be read quickly during normal operations)
-    pub(super) async fn save_cookie(&self, value: CookieValue, url: Url, version: VersionName) -> Result<()> {
+    pub(super) async fn save_cookie(&self, value: CookieValue, url: Arc<Url>, version: VersionName) -> Result<()> {
         self.dao.save_cookie(&value, &version).await?;
         let mut lock = self.cookie_map.write().await;
         lock.insert(value, url);
@@ -177,5 +178,5 @@ fn build_version_servers(versions: Vec<Version>) -> Vec<VersionServer> {
 }
 
 fn build_version_server(version: Version, port: u16) -> VersionServer {
-    VersionServer { port, upstream: Url::parse(format!("http://localhost:{}", port).as_str()).unwrap(), version, task: None }
+    VersionServer { port, upstream: Arc::new(Url::parse(format!("http://localhost:{}", port).as_str()).unwrap()), version, task: None }
 }
