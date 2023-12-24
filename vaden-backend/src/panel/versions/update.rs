@@ -16,7 +16,7 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-use crate::dao::Dao;
+use crate::dao::{Dao, VersionName};
 use crate::manager::strategy::Strategy;
 use crate::server::Versions;
 use actix_web::web::Data;
@@ -27,7 +27,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct VersionRequest {
-    name: String,
+    name: VersionName,
     strategy: Strategy,
 }
 

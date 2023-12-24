@@ -60,7 +60,7 @@ use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
-    env::set_var("RUST_LOG", "debug");
+    env::set_var("RUST_LOG", "info");
     env_logger::init();
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
@@ -111,9 +111,8 @@ async fn start_http(
     versions: Vec<Version>,
 ) -> (JoinHandle<std::io::Result<()>>, JoinHandle<std::io::Result<()>>) {
     let config = Data::new(config);
+    let servers = Versions::start(versions, config.app_run_directory(), dao.clone()).await;
     let dao = Data::new(dao);
-
-    let servers = Versions::start(versions, config.app_run_directory()).await;
     let servers = Data::new(servers);
     let panel_handle = start_panel_http(config.clone(), dao, servers.clone());
     let proxy_handle = start_proxy_http(config.proxy_addr(), servers);

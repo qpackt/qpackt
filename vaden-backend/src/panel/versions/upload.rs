@@ -19,7 +19,7 @@
 
 use crate::config::Config;
 use crate::constants::VERSIONS_SUBDIRECTORY;
-use crate::dao::{Dao, Version};
+use crate::dao::{Dao, Version, VersionName};
 use crate::error::Result;
 use crate::error::VadenError;
 use crate::manager::strategy::Strategy;
@@ -52,7 +52,7 @@ pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao
     }
 }
 
-async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> Result<String> {
+async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> Result<VersionName> {
     let field = payload
         .try_next()
         .await
@@ -71,17 +71,17 @@ async fn save_version(field: Field, config: &Config, dao: &Dao) -> Result<Versio
     unzip_and_register(&zip_path, &target, name, config.app_run_directory(), dao).await
 }
 
-fn create_path(config: &Config, date_time_str: &str) -> Result<PathBuf> {
-    let path = config.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(date_time_str);
+fn create_path(config: &Config, name: &VersionName) -> Result<PathBuf> {
+    let path = config.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(name.to_string());
     fs::create_dir_all(&path)?;
     Ok(path)
 }
 
-fn create_name() -> String {
+fn create_name() -> VersionName {
     let time: DateTime<Utc> = DateTime::from(SystemTime::now());
     let date_time_str =
         format!("{}_{:02}_{:02}__{:02}_{:02}_{:02}", time.year(), time.month(), time.day(), time.hour(), time.minute(), time.second());
-    date_time_str
+    date_time_str.into()
 }
 
 async fn wait_for_content(mut field: Field, target: &Path) -> Result<PathBuf> {
@@ -94,7 +94,7 @@ async fn wait_for_content(mut field: Field, target: &Path) -> Result<PathBuf> {
     Ok(zip_path)
 }
 
-async fn unzip_and_register(zip_path: &Path, target: &Path, name: String, app_run_dir: &Path, dao: &Dao) -> Result<Version> {
+async fn unzip_and_register(zip_path: &Path, target: &Path, name: VersionName, app_run_dir: &Path, dao: &Dao) -> Result<Version> {
     let web_root = unzip_site(zip_path, target)?;
     let web_root = web_root
         .strip_prefix(app_run_dir.join(VERSIONS_SUBDIRECTORY))

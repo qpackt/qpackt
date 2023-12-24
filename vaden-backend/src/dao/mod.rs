@@ -22,9 +22,13 @@ mod inner;
 use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};
 use crate::manager::strategy::Strategy;
+use crate::proxy::handler::CookieValue;
+use awc::cookie::time::format_description::well_known::Iso8601;
+use awc::cookie::time::OffsetDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
+use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -32,10 +36,14 @@ use std::sync::Arc;
 const SQLITE_FILE: &str = "vaden.sqlite";
 
 /// DAO to encapsulate reading/writing from/to a database.
+/// The basic idea is that saving/reading data is completely separated from business logic.
+/// Business logic doesn't know how stuff is saved, dao doesn't know what it saves.
 #[derive(Clone)]
 pub(crate) struct Dao {
     inner: Arc<DaoInner>,
 }
+
+impl Dao {}
 
 impl Dao {
     /// Initialize database (ensure app dir exists, create file, etc...)
@@ -56,7 +64,7 @@ impl Dao {
         let strategy = serde_json::to_string(&version.strategy).unwrap();
         let q = sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
             .bind(version.web_root.to_str().unwrap())
-            .bind(&version.name)
+            .bind(version.name.to_string())
             .bind(&strategy);
         let url = self.inner.get_read_write_url().await;
         let mut connection = get_sqlite_connection(&url).await?;
@@ -101,7 +109,7 @@ impl Dao {
 
             let strategy = serde_json::from_str::<Strategy>(&strategy)
                 .map_err(|_| VadenError::DatabaseError(format!("Unable to deserialize strategy '{}' from json", strategy)))?;
-            versions.push(Version { name, web_root, strategy })
+            versions.push(Version { name: name.into(), web_root, strategy })
         }
         Ok(versions)
     }
@@ -118,12 +126,28 @@ impl Dao {
             let strategy = serde_json::to_string(&version.strategy).unwrap();
             let q = sqlx::query("INSERT INTO versions (web_root, name, strategy) VALUES ($1, $2, $3)")
                 .bind(web_root)
-                .bind(&version.name)
+                .bind(version.name.to_string())
                 .bind(&strategy);
             q.execute(&mut *transaction).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         }
         transaction.commit().await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
+    }
+
+    pub(crate) async fn save_cookie(&self, cookie: &CookieValue, version: &VersionName) -> Result<()> {
+        let url = self.inner.get_read_write_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
+        let q = sqlx::query("INSERT INTO sessions (cookie, version, creation_time) VALUES ($1, $2, $3)")
+            .bind(cookie.to_string())
+            .bind(version.to_string())
+            .bind(OffsetDateTime::now_utc().format(&Iso8601::DEFAULT).unwrap());
+        q.execute(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        Ok(())
+    }
+
+    pub(crate) async fn read_cookie(&self, cookie: &CookieValue) -> Result<Option<VersionName>> {
+        // TODO
+        Ok(None)
     }
 
     /// Called on startup to ensure that sqlite file exists and all migrations are applied.
@@ -135,9 +159,24 @@ impl Dao {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct VersionName(Arc<str>);
+
+impl From<String> for VersionName {
+    fn from(value: String) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl Display for VersionName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Version {
-    pub name: String,
+    pub name: VersionName,
     pub web_root: PathBuf,
     pub strategy: Strategy,
 }

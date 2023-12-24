@@ -32,6 +32,7 @@ pub(crate) async fn delete_version(name: Path<String>, dao: Data<Dao>, app: Data
     debug!("Deleting version {}", name);
     match dao.delete_version(&name).await {
         Ok(path) => {
+            let name = name.into_inner().into();
             versions.delete_version(&name).await;
             let path = app.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(path);
             if let Err(e) = fs::remove_dir_all(&path) {

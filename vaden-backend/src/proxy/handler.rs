@@ -25,9 +25,11 @@ use actix_web::{HttpRequest, HttpResponse};
 use awc::cookie::time::{Duration, OffsetDateTime};
 use awc::http::StatusCode;
 use awc::{Client, ClientRequest};
-use log::debug;
+use log::{debug, error};
 use rand::{thread_rng, RngCore};
+use std::fmt::{Display, Formatter};
 use std::ops::Add;
+use std::sync::Arc;
 use url::Url;
 
 /// A cookie that is used to recognize which version was served to the client in previous requests.
@@ -35,11 +37,28 @@ use url::Url;
 /// from now on.
 const VADEN_COOKIE_NAME: &str = "VADEN_SERVER";
 
+#[derive(Clone, Eq, Hash, PartialEq)]
+pub(crate) struct CookieValue(Arc<str>);
+
+impl From<&str> for CookieValue {
+    fn from(value: &str) -> Self {
+        Self(Arc::from(value))
+    }
+}
+
+impl Display for CookieValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Basic proxy handler (method agnostic).
 /// Finds cookie in client's request and previously set url.
 /// If not found, then creates a new cookie and picks url from [Versions]
 pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
-    let previous_url = previous_url(&client_request, &versions).await;
+    let Ok(previous_url) = previous_url(&client_request, &versions).await else {
+        return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
+    };
     match previous_url {
         None => proxy_to_new(payload, client_request, versions).await,
         Some(url) => proxy_to_previous(payload, client_request, url).await,
@@ -47,13 +66,16 @@ pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest,
 }
 
 async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
-    let Ok(found) = versions.get_upstream(client_request.query_string()).await else {
+    let Ok((url, version)) = versions.pick_upstream(client_request.query_string()).await else {
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     };
-    let cookie = create_new_cookie();
-    versions.save_cookie_url(cookie.value().to_owned(), found.clone()).await;
-    debug!("Proxying request to {}", found);
-    build_response(payload, client_request.head(), found, Some(cookie)).await
+    let (cookie, cookie_value) = create_new_cookie();
+    if let Err(e) = versions.save_cookie(cookie_value, url.clone(), version).await {
+        error!("Unable to save cookie: {}", e);
+        return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    // debug!("Proxying request to {}", url);
+    build_response(payload, client_request.head(), url, Some(cookie)).await
 }
 
 async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: Url) -> HttpResponse {
@@ -62,9 +84,17 @@ async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: U
     build_response(payload, client_request.head(), destination, None).await
 }
 
-async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> Option<Url> {
-    let cookie = request.cookie(VADEN_COOKIE_NAME)?;
-    versions.get_url_for_cookie(cookie.value()).await
+async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> crate::error::Result<Option<Url>> {
+    let Some(cookie) = request.cookie(VADEN_COOKIE_NAME) else {
+        return Ok(None);
+    };
+    match versions.get_url_for_cookie(&cookie.value().into()).await {
+        Ok(url) => Ok(url),
+        Err(e) => {
+            error!("Unable to get url for cookie: {}", e);
+            Err(e)
+        }
+    }
 }
 
 async fn build_response(payload: Payload, head: &RequestHead, destination: Url, cookie: Option<Cookie<'_>>) -> HttpResponse {
@@ -81,10 +111,12 @@ async fn build_response(payload: Payload, head: &RequestHead, destination: Url, 
     proxy_response.streaming(upstream_response)
 }
 
-fn create_new_cookie() -> Cookie<'static> {
-    let mut cookie = Cookie::new(VADEN_COOKIE_NAME, format!("{}", thread_rng().next_u64()));
+fn create_new_cookie() -> (Cookie<'static>, CookieValue) {
+    let s = format!("{}", thread_rng().next_u64());
+    let value = CookieValue::from(s.as_str());
+    let mut cookie = Cookie::new(VADEN_COOKIE_NAME, s);
     cookie.set_expires(OffsetDateTime::now_utc().add(Duration::days(7)));
-    cookie
+    (cookie, value)
 }
 
 fn build_request(head: &RequestHead, destination: Url) -> ClientRequest {
