@@ -111,7 +111,7 @@ async fn start_http(
     versions: Vec<Version>,
 ) -> (JoinHandle<std::io::Result<()>>, JoinHandle<std::io::Result<()>>) {
     let config = Data::new(config);
-    let servers = Versions::start(versions, config.app_run_directory(), dao.clone()).await;
+    let servers = Versions::start(versions, config.app_run_directory()).await;
     let dao = Data::new(dao);
     let servers = Data::new(servers);
     let panel_handle = start_panel_http(config.clone(), dao, servers.clone());

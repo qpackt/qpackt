@@ -22,14 +22,11 @@ mod inner;
 use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};
 use crate::manager::strategy::Strategy;
-use crate::proxy::handler::CookieValue;
-use awc::cookie::time::format_description::well_known::Iso8601;
-use awc::cookie::time::OffsetDateTime;
-use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -135,39 +132,6 @@ impl Dao {
         Ok(())
     }
 
-    /// Saves cookie and corresponding [VersionName] in the database to be read after restart.
-    pub(crate) async fn save_cookie(&self, cookie: &CookieValue, version: &VersionName) -> Result<()> {
-        debug!("Saving version {} for cookie {}", version, cookie);
-        let q = sqlx::query("INSERT INTO sessions (cookie, version, creation_time) VALUES ($1, $2, $3)")
-            .bind(cookie.to_string())
-            .bind(version.to_string())
-            .bind(OffsetDateTime::now_utc().format(&Iso8601::DEFAULT).unwrap());
-        let url = self.inner.get_read_write_url().await;
-        let mut conn = get_sqlite_connection(&url).await?;
-        q.execute(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
-        Ok(())
-    }
-
-    /// Reads [VersionName] for given cookie.
-    pub(crate) async fn read_cookie(&self, cookie: &CookieValue) -> Result<Option<VersionName>> {
-        debug!("Querying database for cookie {}", cookie);
-        let q = sqlx::query("SELECT version FROM sessions WHERE cookie = $1").bind(cookie.to_string());
-        let url = self.inner.get_read_only_url().await;
-        let mut conn = get_sqlite_connection(&url).await?;
-        let row = q.fetch_optional(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
-        match row {
-            None => {
-                warn!("Version not found for cookie {}", cookie);
-                Ok(None)
-            }
-            Some(found) => {
-                let version = found.try_get::<String, _>("version").map_err(|e| VadenError::DatabaseError(e.to_string()))?;
-                debug!("Found version {} for cookie {}", version, cookie);
-                Ok(Some(VersionName::from(version)))
-            }
-        }
-    }
-
     /// Called on startup to ensure that sqlite file exists and all migrations are applied.
     async fn ensure_sqlite_initialized(&self) -> Result<()> {
         let url = self.inner.get_read_write_url().await;
@@ -189,6 +153,12 @@ impl From<String> for VersionName {
 impl Display for VersionName {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl VersionName {
+    pub(crate) fn matches(&self, other: &str) -> bool {
+        self.0.deref() == other
     }
 }
 

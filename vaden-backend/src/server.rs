@@ -1,13 +1,11 @@
 use crate::constants::VERSIONS_SUBDIRECTORY;
-use crate::dao::{Dao, Version, VersionName};
+use crate::dao::{Version, VersionName};
 use crate::error::{Result, VadenError};
 use crate::manager::strategy::Strategy;
-use crate::proxy::handler::CookieValue;
 use actix_files::Files;
 use actix_web::{App, HttpServer};
 use log::{debug, error, info, warn};
 use rand::{thread_rng, Rng};
-use std::collections::HashMap;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::path::Path;
 use std::sync::Arc;
@@ -21,8 +19,6 @@ const START_PORT: u16 = 9000;
 /// Contains details for various versions' servers.  
 pub(crate) struct Versions {
     versions: RwLock<Vec<VersionServer>>,
-    cookie_map: RwLock<HashMap<CookieValue, Arc<Url>>>,
-    dao: Dao,
 }
 
 pub(crate) struct VersionServer {
@@ -33,10 +29,10 @@ pub(crate) struct VersionServer {
 }
 
 impl Versions {
-    pub(super) async fn start(versions: Vec<Version>, run_dir: &Path, dao: Dao) -> Self {
+    pub(super) async fn start(versions: Vec<Version>, run_dir: &Path) -> Self {
         let mut versions = build_version_servers(versions);
         start_version_servers(&mut versions, run_dir).await;
-        Self { versions: RwLock::new(versions), cookie_map: RwLock::new(Default::default()), dao }
+        Self { versions: RwLock::new(versions) }
     }
 
     /// Tries to pick a new [Url] and [VersionName] for request based on [Strategy] and request query.
@@ -108,46 +104,9 @@ impl Versions {
     }
 
     /// Gets [Url] for cookie from cookie_map.
-    /// If not found in cookie_map then reaches database to read saved [VersionName],
-    /// maps version name to url and saves url in cookie map for future searches.
-    pub(super) async fn get_url_for_cookie(&self, cookie: &CookieValue) -> Result<Option<Arc<Url>>> {
-        let lock = self.cookie_map.read().await;
-        if let Some(url) = lock.get(cookie) {
-            return Ok(Some(url.clone()));
-        }
-        drop(lock);
-        match self.dao.read_cookie(cookie).await? {
-            None => Ok(None),
-            Some(version) => {
-                let found = {
-                    let lock = self.versions.read().await;
-                    lock.iter().find(|v| v.version.name == version).map(|v| v.upstream.clone())
-                };
-                match found {
-                    None => Ok(None),
-                    Some(url) => {
-                        let mut lock = self.cookie_map.write().await;
-                        lock.insert(cookie.clone(), url.clone());
-                        Ok(Some(url))
-                    }
-                }
-            }
-        }
-    }
-
-    /// Saves cookie value:
-    /// - [VersionName] in database (to be read after restart)
-    /// - [Url] in a HashMap (to be read quickly during normal operations)
-    pub(super) async fn save_cookie(&self, cookie: CookieValue, url: Arc<Url>, version: VersionName) {
-        tokio::spawn(Self::save_cookie_in_database(self.dao.clone(), cookie.clone(), version.clone()));
-        let mut lock = self.cookie_map.write().await;
-        lock.insert(cookie, url);
-    }
-
-    async fn save_cookie_in_database(dao: Dao, cookie: CookieValue, version: VersionName) {
-        if let Err(e) = dao.save_cookie(&cookie, &version).await {
-            error!("Unable to save cookie in database: {}", e);
-        }
+    pub(super) async fn get_url_for_cookie(&self, cookie: &str) -> Option<Arc<Url>> {
+        let versions = self.versions.read().await;
+        versions.iter().find(|v| v.version.name.matches(cookie)).map(|found| found.upstream.clone())
     }
 }
 
