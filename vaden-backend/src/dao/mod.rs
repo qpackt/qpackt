@@ -117,10 +117,10 @@ impl Dao {
 
     /// Saves versions to the database
     pub(crate) async fn save_versions(&self, versions: &[Version]) -> Result<()> {
+        let q = sqlx::query("DELETE FROM versions");
         let url = self.inner.get_read_write_url().await;
         let mut conn = get_sqlite_connection(&url).await?;
         let mut transaction = conn.begin().await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
-        let q = sqlx::query("DELETE FROM versions");
         q.execute(&mut *transaction).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         for version in versions {
             let web_root = version.web_root.to_str().unwrap();
@@ -135,15 +135,15 @@ impl Dao {
         Ok(())
     }
 
-    // TODO move url and connection after query building everywhere
     /// Saves cookie and corresponding [VersionName] in the database to be read after restart.
     pub(crate) async fn save_cookie(&self, cookie: &CookieValue, version: &VersionName) -> Result<()> {
-        let url = self.inner.get_read_write_url().await;
-        let mut conn = get_sqlite_connection(&url).await?;
+        debug!("Saving version {} for cookie {}", version, cookie);
         let q = sqlx::query("INSERT INTO sessions (cookie, version, creation_time) VALUES ($1, $2, $3)")
             .bind(cookie.to_string())
             .bind(version.to_string())
             .bind(OffsetDateTime::now_utc().format(&Iso8601::DEFAULT).unwrap());
+        let url = self.inner.get_read_write_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
         q.execute(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         Ok(())
     }

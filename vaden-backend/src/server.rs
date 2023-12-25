@@ -138,14 +138,14 @@ impl Versions {
     /// Saves cookie value:
     /// - [VersionName] in database (to be read after restart)
     /// - [Url] in a HashMap (to be read quickly during normal operations)
-    pub(super) async fn save_cookie(&self, value: CookieValue, url: Arc<Url>, version: VersionName) {
-        tokio::spawn(Self::save_cookie_in_database(self.dao.clone(), value.clone(), version.clone()));
+    pub(super) async fn save_cookie(&self, cookie: CookieValue, url: Arc<Url>, version: VersionName) {
+        tokio::spawn(Self::save_cookie_in_database(self.dao.clone(), cookie.clone(), version.clone()));
         let mut lock = self.cookie_map.write().await;
-        lock.insert(value, url);
+        lock.insert(cookie, url);
     }
 
-    async fn save_cookie_in_database(dao: Dao, value: CookieValue, version: VersionName) {
-        if let Err(e) = dao.save_cookie(&value, &version).await {
+    async fn save_cookie_in_database(dao: Dao, cookie: CookieValue, version: VersionName) {
+        if let Err(e) = dao.save_cookie(&cookie, &version).await {
             error!("Unable to save cookie in database: {}", e);
         }
     }
