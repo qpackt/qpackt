@@ -25,6 +25,7 @@ use crate::manager::strategy::Strategy;
 use crate::proxy::handler::CookieValue;
 use awc::cookie::time::format_description::well_known::Iso8601;
 use awc::cookie::time::OffsetDateTime;
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use sqlx::{Connection, Row};
@@ -134,6 +135,8 @@ impl Dao {
         Ok(())
     }
 
+    // TODO move url and connection after query building everywhere
+    /// Saves cookie and corresponding [VersionName] in the database to be read after restart.
     pub(crate) async fn save_cookie(&self, cookie: &CookieValue, version: &VersionName) -> Result<()> {
         let url = self.inner.get_read_write_url().await;
         let mut conn = get_sqlite_connection(&url).await?;
@@ -145,9 +148,24 @@ impl Dao {
         Ok(())
     }
 
+    /// Reads [VersionName] for given cookie.
     pub(crate) async fn read_cookie(&self, cookie: &CookieValue) -> Result<Option<VersionName>> {
-        // TODO
-        Ok(None)
+        debug!("Querying database for cookie {}", cookie);
+        let q = sqlx::query("SELECT version FROM sessions WHERE cookie = $1").bind(cookie.to_string());
+        let url = self.inner.get_read_only_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
+        let row = q.fetch_optional(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        match row {
+            None => {
+                warn!("Version not found for cookie {}", cookie);
+                Ok(None)
+            }
+            Some(found) => {
+                let version = found.try_get::<String, _>("version").map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+                debug!("Found version {} for cookie {}", version, cookie);
+                Ok(Some(VersionName::from(version)))
+            }
+        }
     }
 
     /// Called on startup to ensure that sqlite file exists and all migrations are applied.

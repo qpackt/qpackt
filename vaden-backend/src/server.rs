@@ -116,16 +116,13 @@ impl Versions {
             return Ok(Some(url.clone()));
         }
         drop(lock);
-        match self.dao.read_cookie(cookie).await {
-            Err(e) => {
-                error!("Unable to read cookie from database: {}", e);
-                Err(e)
-            }
-            Ok(None) => Ok(None),
-            Ok(Some(version)) => {
-                let lock = self.versions.read().await;
-                let found = lock.iter().find(|v| v.version.name == version).map(|v| v.upstream.clone());
-                drop(lock);
+        match self.dao.read_cookie(cookie).await? {
+            None => Ok(None),
+            Some(version) => {
+                let found = {
+                    let lock = self.versions.read().await;
+                    lock.iter().find(|v| v.version.name == version).map(|v| v.upstream.clone())
+                };
                 match found {
                     None => Ok(None),
                     Some(url) => {
@@ -141,11 +138,16 @@ impl Versions {
     /// Saves cookie value:
     /// - [VersionName] in database (to be read after restart)
     /// - [Url] in a HashMap (to be read quickly during normal operations)
-    pub(super) async fn save_cookie(&self, value: CookieValue, url: Arc<Url>, version: VersionName) -> Result<()> {
-        self.dao.save_cookie(&value, &version).await?;
+    pub(super) async fn save_cookie(&self, value: CookieValue, url: Arc<Url>, version: VersionName) {
+        tokio::spawn(Self::save_cookie_in_database(self.dao.clone(), value.clone(), version.clone()));
         let mut lock = self.cookie_map.write().await;
         lock.insert(value, url);
-        Ok(())
+    }
+
+    async fn save_cookie_in_database(dao: Dao, value: CookieValue, version: VersionName) {
+        if let Err(e) = dao.save_cookie(&value, &version).await {
+            error!("Unable to save cookie in database: {}", e);
+        }
     }
 }
 

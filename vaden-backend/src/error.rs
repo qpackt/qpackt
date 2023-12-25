@@ -42,6 +42,7 @@ pub(crate) enum VadenError {
     #[error("unable to proxy request")]
     ProxyError,
 
+    // TODO change to 'from sqlx Error' for easier conversions
     #[error("unable to access database {0}")]
     DatabaseError(String),
 

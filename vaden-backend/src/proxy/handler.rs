@@ -70,10 +70,7 @@ async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: D
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     };
     let (cookie, cookie_value) = create_new_cookie();
-    if let Err(e) = versions.save_cookie(cookie_value, url.clone(), version).await {
-        error!("Unable to save cookie: {}", e);
-        return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
-    }
+    versions.save_cookie(cookie_value, url.clone(), version).await;
     debug!("Proxying request to {}", url);
     build_response(payload, client_request.head(), url.deref().clone(), Some(cookie)).await
 }
