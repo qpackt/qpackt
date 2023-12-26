@@ -26,7 +26,7 @@ Deserialize to:
 /// Traffic split strategy.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[allow(variant_size_differences)]
-pub enum Strategy {
+pub(crate) enum Strategy {
     /// Calculate percent of sessions based on the total sum of all weights.
     /// Only 'Weight' strategies are counted towards the total sum.
     /// Example:

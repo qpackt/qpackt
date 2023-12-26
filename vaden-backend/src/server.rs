@@ -1,5 +1,5 @@
 use crate::constants::VERSIONS_SUBDIRECTORY;
-use crate::dao::{Version, VersionName};
+use crate::dao::version::{Version, VersionName};
 use crate::error::{Result, VadenError};
 use crate::manager::strategy::Strategy;
 use actix_files::Files;

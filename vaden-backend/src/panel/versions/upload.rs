@@ -19,7 +19,8 @@
 
 use crate::config::Config;
 use crate::constants::VERSIONS_SUBDIRECTORY;
-use crate::dao::{Dao, Version, VersionName};
+use crate::dao::version::{Version, VersionName};
+use crate::dao::Dao;
 use crate::error::Result;
 use crate::error::VadenError;
 use crate::manager::strategy::Strategy;

@@ -17,7 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::dao::VersionName;
+use crate::dao::version::VersionName;
 use crate::server::Versions;
 use actix_web::cookie::Cookie;
 use actix_web::dev::RequestHead;

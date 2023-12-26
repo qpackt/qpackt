@@ -43,7 +43,8 @@ mod proxy;
 mod server;
 
 use crate::config::Config;
-use crate::dao::{Dao, Version};
+use crate::dao::version::Version;
+use crate::dao::Dao;
 use crate::error::Result;
 use crate::error::VadenError;
 use crate::panel::start_panel_http;

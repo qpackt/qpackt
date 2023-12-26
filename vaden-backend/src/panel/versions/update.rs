@@ -16,7 +16,8 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-use crate::dao::{Dao, VersionName};
+use crate::dao::version::VersionName;
+use crate::dao::Dao;
 use crate::manager::strategy::Strategy;
 use crate::server::Versions;
 use actix_web::web::Data;
