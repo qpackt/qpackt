@@ -80,6 +80,7 @@ impl Versions {
         }
     }
 
+    /// Deletes [Version] and stops its task.
     pub(super) async fn delete_version(&self, name: &VersionName) {
         let mut versions = self.versions.write().await;
         for (i, v) in versions.iter().enumerate() {
@@ -95,6 +96,7 @@ impl Versions {
         }
     }
 
+    /// Adds [Version] and starts [VersionServer] for it.
     pub(super) async fn add_version(&self, version: Version, run_dir: &Path) {
         let mut versions = self.versions.write().await;
         let next_port = versions.iter().map(|v| v.port).max().unwrap_or(START_PORT) + 1;
@@ -103,7 +105,7 @@ impl Versions {
         versions.push(server);
     }
 
-    /// Gets [Url] for cookie from cookie_map.
+    /// Gets [Url] for cookie.
     pub(super) async fn get_url_for_cookie(&self, cookie: &str) -> Option<Arc<Url>> {
         let versions = self.versions.read().await;
         versions.iter().find(|v| v.version.name.matches(cookie)).map(|found| found.upstream.clone())
