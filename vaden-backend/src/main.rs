@@ -32,6 +32,7 @@
     unused_qualifications,
     variant_size_differences
 )]
+mod analytics;
 mod config;
 pub mod constants;
 pub mod dao;
@@ -61,13 +62,14 @@ use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
-    env::set_var("RUST_LOG", "info");
+    env::set_var("RUST_LOG", "debug");
     env_logger::init();
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
         let config = Config::read(config_path).await.unwrap();
         ensure_app_dir_exists(config.app_run_directory()).unwrap();
         let dao = Dao::init(config.app_run_directory()).await.unwrap();
+        analytics::hash::init(dao.clone()).await.unwrap();
         let versions = dao.list_versions().await.unwrap();
         let (panel_handle, proxy_handle) = start_http(config, dao, versions).await;
         wait(panel_handle, proxy_handle).await;

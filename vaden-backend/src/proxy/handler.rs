@@ -17,6 +17,8 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use crate::analytics;
+use crate::analytics::hash::VisitorHash;
 use crate::dao::version::VersionName;
 use crate::server::Versions;
 use actix_web::cookie::Cookie;
@@ -27,6 +29,7 @@ use awc::cookie::time::{Duration, OffsetDateTime};
 use awc::http::StatusCode;
 use awc::{Client, ClientRequest};
 use log::debug;
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::ops::{Add, Deref};
 use std::sync::Arc;
 use url::Url;
@@ -51,8 +54,15 @@ async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: D
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     };
     let cookie = create_new_cookie(version.clone());
-    debug!("Proxying request to {}", url);
+    let hash = calculate_visitor_hash(&client_request);
+    debug!("Proxying request to {} with visitor hash {:?}", url, hash);
     build_response(payload, client_request.head(), url.deref().clone(), Some(cookie)).await
+}
+
+fn calculate_visitor_hash(client_request: &HttpRequest) -> VisitorHash {
+    let peer = client_request.peer_addr().unwrap_or_else(|| SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 1))).ip();
+    let user_agent = client_request.headers().get("User-Agent").map(|v| v.as_bytes().to_vec()).unwrap_or_default();
+    analytics::hash::create(peer, user_agent)
 }
 
 async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: Url) -> HttpResponse {

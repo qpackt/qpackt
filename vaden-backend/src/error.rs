@@ -51,4 +51,7 @@ pub(crate) enum VadenError {
 
     #[error("site processing error: {0}")]
     UnableToProcessSite(String),
+
+    #[error("unable to serialize/deserialize")]
+    SerializationError,
 }
