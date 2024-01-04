@@ -19,6 +19,8 @@
 
 use crate::analytics;
 use crate::analytics::hash::VisitorHash;
+use crate::analytics::writer::RequestWriter;
+use crate::dao::requests::Request;
 use crate::dao::version::VersionName;
 use crate::server::Versions;
 use actix_web::cookie::Cookie;
@@ -42,20 +44,31 @@ const VADEN_COOKIE_NAME: &str = "VADEN_VERSION";
 /// Basic proxy handler (method agnostic).
 /// Finds cookie in client's request and previously set url.
 /// If not found, then creates a new cookie and picks url from [Versions]
-pub(crate) async fn proxy_handler(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
+pub(crate) async fn proxy_handler(
+    payload: Payload,
+    client_request: HttpRequest,
+    versions: Data<Versions>,
+    writer: Data<RequestWriter>,
+) -> HttpResponse {
     match previous_url(&client_request, &versions).await {
-        None => proxy_to_new(payload, client_request, versions).await,
-        Some(url) => proxy_to_previous(payload, client_request, url.deref().clone()).await,
+        None => proxy_to_new(payload, client_request, versions, writer).await,
+        Some((url, version)) => proxy_to_previous(payload, client_request, url.deref().clone(), writer, version).await,
     }
 }
 
-async fn proxy_to_new(payload: Payload, client_request: HttpRequest, versions: Data<Versions>) -> HttpResponse {
+async fn proxy_to_new(
+    payload: Payload,
+    client_request: HttpRequest,
+    versions: Data<Versions>,
+    writer: Data<RequestWriter>,
+) -> HttpResponse {
     let Ok((url, version)) = versions.pick_upstream(client_request.query_string()).await else {
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
     };
     let cookie = create_new_cookie(version.clone());
     let hash = calculate_visitor_hash(&client_request);
     debug!("Proxying request to {} with visitor hash {:?}", url, hash);
+    writer.save(Request::new(hash, version, client_request.uri().clone())).await;
     build_response(payload, client_request.head(), url.deref().clone(), Some(cookie)).await
 }
 
@@ -65,13 +78,21 @@ fn calculate_visitor_hash(client_request: &HttpRequest) -> VisitorHash {
     analytics::hash::create(peer, user_agent)
 }
 
-async fn proxy_to_previous(payload: Payload, client_request: HttpRequest, url: Url) -> HttpResponse {
+async fn proxy_to_previous(
+    payload: Payload,
+    client_request: HttpRequest,
+    url: Url,
+    writer: Data<RequestWriter>,
+    version: VersionName,
+) -> HttpResponse {
+    let hash = calculate_visitor_hash(&client_request);
+    debug!("Proxying request to {} with visitor hash {:?}", url, hash);
     let destination = build_upstream_url(&client_request, url).await;
-    debug!("Proxying request to {}", destination);
+    writer.save(Request::new(hash, version, client_request.uri().clone())).await;
     build_response(payload, client_request.head(), destination, None).await
 }
 
-async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> Option<Arc<Url>> {
+async fn previous_url(request: &HttpRequest, versions: &Data<Versions>) -> Option<(Arc<Url>, VersionName)> {
     let version = request.cookie(VADEN_COOKIE_NAME)?;
     versions.get_url_for_cookie(version.value()).await
 }

@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: AGPL-3.0
+/*
+   Vaden: Versioned Application Deployment Engine
+   Copyright (C) 2023 Łukasz Wojtów
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as
+   published by the Free Software Foundation, either version 3 of the
+   License.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+use crate::dao::requests::Request;
+use crate::dao::Dao;
+use log::error;
+use std::mem::replace;
+use std::time::Duration;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::{timeout, Instant};
+
+/// Simple actor to accept [Request]s that need to be written to DB to enable analytics.
+#[derive(Clone)]
+pub(crate) struct RequestWriter {
+    sender: Sender<Request>,
+}
+
+/// Buffer length for [Request]s before saving to DB.
+const MAX_REQUESTS: usize = 1024;
+
+impl RequestWriter {
+    /// Creates new [RequestWriter] and starts background thread for actually saving requests to DB.
+    pub(crate) fn new(dao: Dao) -> Self {
+        let (sender, receiver) = tokio::sync::mpsc::channel(65536);
+        tokio::spawn(request_receiver(receiver, dao));
+        Self { sender }
+    }
+
+    /// Accepts [Request] that need to be saved to DB for analytics.
+    pub(crate) async fn save(&self, request: Request) {
+        // Send request to an internal channel. This timeout needs to be fairly short as it will block the client's http request.
+        // It will only fail if the channel's buffer is full, which will only happen if DB can't catch up.
+        if let Err(e) = self.sender.send_timeout(request, Duration::from_millis(50)).await {
+            error!("Unable to log request: {}", e);
+        }
+    }
+}
+
+/// Starts a receiver loop. Once a [Request] is received is waits max 1 second for more requests and
+/// then saves them to DB.
+async fn request_receiver(mut receiver: Receiver<Request>, dao: Dao) {
+    let mut buffer = Vec::with_capacity(MAX_REQUESTS);
+    while let Some(request) = receiver.recv().await {
+        buffer.push(request);
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while let Ok(Some(request)) = timeout(deadline - Instant::now(), receiver.recv()).await {
+            buffer.push(request);
+            if buffer.len() >= MAX_REQUESTS {
+                save_requests(&dao, &mut buffer).await;
+                break;
+            }
+        }
+        if !buffer.is_empty() {
+            save_requests(&dao, &mut buffer).await;
+        }
+    }
+}
+
+/// Calls [Dao] to save [Request]s to DB. Replaces buffer with new one.
+async fn save_requests(dao: &Dao, buffer: &mut Vec<Request>) {
+    let ready = replace(buffer, Vec::with_capacity(MAX_REQUESTS));
+    if let Err(e) = dao.save_requests(ready).await {
+        error!("Unable to save requests to DB: {}", e);
+    }
+}

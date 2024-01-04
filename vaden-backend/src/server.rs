@@ -37,7 +37,7 @@ impl Versions {
 
     /// Tries to pick a new [Url] and [VersionName] for request based on [Strategy] and request query.
     /// First try url param matching,
-    /// Then calculate total weights and pick some version proportionally.
+    /// then calculate total weights and pick some version proportionally.
     pub(super) async fn pick_upstream(&self, query: &str) -> Result<(Arc<Url>, VersionName)> {
         let versions = self.versions.read().await;
         // Try UrlParam matching first.
@@ -106,9 +106,9 @@ impl Versions {
     }
 
     /// Gets [Url] for cookie.
-    pub(super) async fn get_url_for_cookie(&self, cookie: &str) -> Option<Arc<Url>> {
+    pub(super) async fn get_url_for_cookie(&self, cookie: &str) -> Option<(Arc<Url>, VersionName)> {
         let versions = self.versions.read().await;
-        versions.iter().find(|v| v.version.name.matches(cookie)).map(|found| found.upstream.clone())
+        versions.iter().find(|v| v.version.name.matches(cookie)).map(|found| (found.upstream.clone(), found.version.name.clone()))
     }
 }
 

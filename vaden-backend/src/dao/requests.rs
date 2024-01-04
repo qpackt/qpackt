@@ -20,11 +20,16 @@
 //! Contains structs and methods to CRUD users' requests.
 //! This data is later used in analytics.
 
+use crate::analytics::hash::VisitorHash;
 use crate::dao::state::State;
+use crate::dao::version::VersionName;
 use crate::dao::Dao;
 use crate::error::Result;
+use actix_web::http::Uri;
+use log::debug;
 use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::time::Instant;
 
 /// Daily seed used to creating visitors' hashes ([VisitorHash]).
 /// It isn't really used every time a new hash is needed. Instead, [crate::analytics::hash::CURRENT_INIT] in hash module is used.
@@ -32,6 +37,20 @@ use std::time::SystemTime;
 pub(crate) struct DailySeed {
     pub(crate) init: u64,
     pub(crate) expiration: SystemTime,
+}
+
+#[derive(Debug)]
+pub(crate) struct Request {
+    time: u64,
+    visitor: VisitorHash,
+    version: VersionName,
+    uri: Uri,
+}
+
+impl Request {
+    pub(crate) fn new(visitor: VisitorHash, version: VersionName, uri: Uri) -> Self {
+        Self { time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(), visitor, version, uri }
+    }
 }
 
 impl Dao {
@@ -42,5 +61,10 @@ impl Dao {
 
     pub(crate) async fn save_daily_seed(&self, seed: &DailySeed) -> Result<()> {
         self.set_state(seed).await
+    }
+
+    pub(crate) async fn save_requests(&self, requests: Vec<Request>) -> Result<()> {
+        debug!("Saving requests: {}", requests.len());
+        Ok(())
     }
 }

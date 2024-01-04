@@ -43,6 +43,7 @@ mod password;
 mod proxy;
 mod server;
 
+use crate::analytics::writer::RequestWriter;
 use crate::config::Config;
 use crate::dao::version::Version;
 use crate::dao::Dao;
@@ -54,7 +55,7 @@ use crate::server::Versions;
 use actix_web::web::Data;
 use log::{error, info};
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
@@ -69,9 +70,10 @@ async fn main() {
         let config = Config::read(config_path).await.unwrap();
         ensure_app_dir_exists(config.app_run_directory()).unwrap();
         let dao = Dao::init(config.app_run_directory()).await.unwrap();
+        let writer = RequestWriter::new(dao.clone());
         analytics::hash::init(dao.clone()).await.unwrap();
         let versions = dao.list_versions().await.unwrap();
-        let (panel_handle, proxy_handle) = start_http(config, dao, versions).await;
+        let (panel_handle, proxy_handle) = start_http(config, dao, versions, writer).await;
         wait(panel_handle, proxy_handle).await;
     } else {
         Config::create().await;
@@ -107,18 +109,20 @@ async fn wait(panel_handle: JoinHandle<std::io::Result<()>>, proxy_handle: JoinH
 }
 
 /// Starts two actix processes to serve admin's panel and http proxy.
-/// Returns two join handles so later then can be awaited.
+/// Returns two join handles so later they can be awaited.
 async fn start_http(
     config: Config,
     dao: Dao,
     versions: Vec<Version>,
+    writer: RequestWriter,
 ) -> (JoinHandle<std::io::Result<()>>, JoinHandle<std::io::Result<()>>) {
     let config = Data::new(config);
     let servers = Versions::start(versions, config.app_run_directory()).await;
     let dao = Data::new(dao);
     let servers = Data::new(servers);
+    let writer = Data::new(writer);
     let panel_handle = start_panel_http(config.clone(), dao, servers.clone());
-    let proxy_handle = start_proxy_http(config.proxy_addr(), servers);
+    let proxy_handle = start_proxy_http(config.proxy_addr(), servers, writer);
     (panel_handle, proxy_handle)
 }
 
