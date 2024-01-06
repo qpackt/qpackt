@@ -31,6 +31,12 @@ use std::time::{Duration, SystemTime};
 #[derive(Debug)]
 pub(crate) struct VisitorHash(u64);
 
+impl From<VisitorHash> for i64 {
+    fn from(value: VisitorHash) -> Self {
+        value.0 as i64
+    }
+}
+
 /// Currently used value to initiate calculating [VisitorHash].
 static CURRENT_INIT: AtomicU64 = AtomicU64::new(0);
 
@@ -79,7 +85,10 @@ fn spawn_refresh_loop(dao: Dao, seed: DailySeed) {
 
 fn multiply(hash: &mut u64, bytes: &[u8]) {
     for byte in bytes {
-        (*hash, _) = hash.overflowing_mul(1 + (byte & 0b00001111) as u64);
+        let (new, _) = hash.overflowing_mul((byte & 0b00001111) as u64);
+        if new != 0 {
+            *hash = new;
+        }
     }
 }
 

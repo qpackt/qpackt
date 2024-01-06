@@ -21,5 +21,5 @@ CREATE TABLE requests
     time    INTEGER NOT NULL,
     visitor INTEGER NOT NULL,
     version TEXT    NOT NULL,
-    url     TEXT    NOT NULL
+    uri     TEXT    NOT NULL
 );

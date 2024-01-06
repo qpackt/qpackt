@@ -23,13 +23,12 @@
 use crate::analytics::hash::VisitorHash;
 use crate::dao::state::State;
 use crate::dao::version::VersionName;
-use crate::dao::Dao;
-use crate::error::Result;
+use crate::dao::{get_sqlite_connection, Dao};
+use crate::error::{Result, VadenError};
 use actix_web::http::Uri;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::time::Instant;
 
 /// Daily seed used to creating visitors' hashes ([VisitorHash]).
 /// It isn't really used every time a new hash is needed. Instead, [crate::analytics::hash::CURRENT_INIT] in hash module is used.
@@ -65,6 +64,17 @@ impl Dao {
 
     pub(crate) async fn save_requests(&self, requests: Vec<Request>) -> Result<()> {
         debug!("Saving requests: {}", requests.len());
+        let url = self.inner.get_read_write_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
+        for request in requests {
+            let q = sqlx::query("INSERT INTO requests (time, visitor, version, uri) values ($1, $2, $3, $4)")
+                .bind(request.time as i64)
+                .bind::<i64>(request.visitor.into())
+                .bind(request.version.to_string())
+                .bind(request.uri.to_string());
+            q.execute(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        }
+        debug!("Saved requests");
         Ok(())
     }
 }

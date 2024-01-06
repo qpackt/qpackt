@@ -55,7 +55,7 @@ use crate::server::Versions;
 use actix_web::web::Data;
 use log::{error, info};
 use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
