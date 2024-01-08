@@ -18,8 +18,10 @@
 */
 
 use crate::dao::requests::Request;
+use crate::dao::visits::Visit;
 use crate::dao::Dao;
 use log::error;
+use std::collections::HashMap;
 use std::mem::replace;
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -74,8 +76,30 @@ async fn request_receiver(mut receiver: Receiver<Request>, dao: Dao) {
 
 /// Calls [Dao] to save [Request]s to DB. Replaces buffer with new one.
 async fn save_requests(dao: &Dao, buffer: &mut Vec<Request>) {
-    let ready = replace(buffer, Vec::with_capacity(MAX_REQUESTS));
-    if let Err(e) = dao.save_requests(ready).await {
+    let requests = replace(buffer, Vec::with_capacity(MAX_REQUESTS));
+    if let Err(e) = dao.save_requests(&requests).await {
         error!("Unable to save requests to DB: {}", e);
     }
+    let visits = merge_requests(requests);
+    if let Err(e) = dao.update_visits(&visits).await {
+        error!("Unable to update visits in DB: {}", e);
+    }
+}
+
+/// 'Merges' [Request]s into separate [Visit]s so that they can be shown in analytics.
+/// Uses [VisitorHash] to recognize requests from the same client.
+fn merge_requests(requests: Vec<Request>) -> Vec<Visit> {
+    let mut visits = HashMap::with_capacity(requests.len());
+    for r in requests {
+        let visit = visits.entry(r.visitor).or_insert_with(|| Visit {
+            first_request_time: r.time,
+            last_request_time: r.time,
+            request_count: 0,
+            visitor: r.visitor,
+            version: r.version,
+        });
+        visit.request_count += 1;
+        visit.last_request_time = r.time;
+    }
+    visits.into_values().collect()
 }

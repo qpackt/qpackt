@@ -21,6 +21,7 @@ mod inner;
 pub(crate) mod requests;
 mod state;
 pub(crate) mod version;
+pub(crate) mod visits;
 
 use crate::dao::inner::DaoInner;
 use crate::error::{Result, VadenError};

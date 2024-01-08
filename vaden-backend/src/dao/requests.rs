@@ -40,10 +40,10 @@ pub(crate) struct DailySeed {
 
 #[derive(Debug)]
 pub(crate) struct Request {
-    time: u64,
-    visitor: VisitorHash,
-    version: VersionName,
-    uri: Uri,
+    pub(crate) time: u64,
+    pub(crate) visitor: VisitorHash,
+    pub(crate) version: VersionName,
+    pub(crate) uri: Uri,
 }
 
 impl Request {
@@ -62,7 +62,7 @@ impl Dao {
         self.set_state(seed).await
     }
 
-    pub(crate) async fn save_requests(&self, requests: Vec<Request>) -> Result<()> {
+    pub(crate) async fn save_requests(&self, requests: &[Request]) -> Result<()> {
         debug!("Saving requests: {}", requests.len());
         let url = self.inner.get_read_write_url().await;
         let mut conn = get_sqlite_connection(&url).await?;
@@ -74,7 +74,7 @@ impl Dao {
                 .bind(request.uri.to_string());
             q.execute(&mut conn).await.map_err(|e| VadenError::DatabaseError(e.to_string()))?;
         }
-        debug!("Saved requests");
+        debug!("Saved {} requests", requests.len());
         Ok(())
     }
 }

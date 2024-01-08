@@ -28,7 +28,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime};
 
 /// Visitor's hash. Created from daily seed, IP address and User-Agent
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct VisitorHash(u64);
 
 impl From<VisitorHash> for i64 {
