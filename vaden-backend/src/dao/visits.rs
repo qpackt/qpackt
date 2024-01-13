@@ -22,8 +22,12 @@ use crate::dao::version::VersionName;
 use crate::dao::{get_sqlite_connection, Dao};
 use crate::error::{Result, VadenError};
 use log::debug;
+use serde::Serialize;
+use sqlx::Row;
+use std::collections::HashSet;
 
 /// Represents a user's visit. One visit may have multiple http requests, hence first/last request time and count.
+#[derive(Serialize)]
 pub(crate) struct Visit {
     pub(crate) first_request_time: u64,
     pub(crate) last_request_time: u64,
@@ -54,5 +58,60 @@ impl Dao {
         }
         debug!("Updated visits: {}", visits.len());
         Ok(())
+    }
+
+    /// Gets visits that happened between from_ts and to_ts
+    pub(crate) async fn get_visits(&self, from_ts: u64, to_ts: u64) -> Result<Vec<Visit>> {
+        debug!("Getting visits from {} to {}", from_ts as i64, to_ts as i64);
+        let mut found_versions: HashSet<VersionName> = HashSet::with_capacity(1024);
+        let mut visits = Vec::with_capacity(65536);
+        let url = self.inner.get_read_only_url().await;
+        let mut conn = get_sqlite_connection(&url).await?;
+        let rows = sqlx::query(
+            "SELECT first_request_time, last_request_time, request_count, visitor, version FROM visits WHERE first_request_time >= $1 AND first_request_time <= $2",
+        )
+        .bind(from_ts as i64)
+        .bind(to_ts as i64)
+        .fetch_all(&mut conn)
+        .await
+        .map_err(|e| VadenError::DatabaseError(e.to_string()))?;
+        for row in rows {
+            let first_request_time = row
+                .try_get::<i64, _>("first_request_time")
+                .map_err(|_| VadenError::DatabaseError("No column 'first_request_time' in visits table".into()))?;
+            let last_request_time = row
+                .try_get::<i64, _>("last_request_time")
+                .map_err(|_| VadenError::DatabaseError("No column 'last_request_time' in visits table".into()))?;
+            let request_count = row
+                .try_get::<u32, _>("request_count")
+                .map_err(|_| VadenError::DatabaseError("No column 'request_count' in visits table".into()))?;
+            let visitor =
+                row.try_get::<i64, _>("visitor").map_err(|_| VadenError::DatabaseError("No column 'visitor' in visits table".into()))?;
+            let version =
+                row.try_get::<&str, _>("version").map_err(|_| VadenError::DatabaseError("No column 'version' in versions table".into()))?;
+            // We don't want a new String for every visit. So let's find the right [VersionName] that's cheap to clone.
+            // If not found then create one.
+            let mut found_version: Option<VersionName> = None;
+            for found in &found_versions {
+                if found.matches(version) {
+                    found_version = Some(found.clone());
+                    break;
+                }
+            }
+            let version = found_version.unwrap_or_else(|| {
+                let v = VersionName::from(version.to_string());
+                found_versions.insert(v.clone());
+                v
+            });
+            visits.push(Visit {
+                first_request_time: first_request_time as u64,
+                last_request_time: last_request_time as u64,
+                request_count,
+                visitor: visitor.into(),
+                version,
+            })
+        }
+        debug!("Returned {} visits", visits.len());
+        Ok(visits)
     }
 }

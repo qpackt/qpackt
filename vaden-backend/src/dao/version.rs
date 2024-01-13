@@ -27,7 +27,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, Hash, PartialEq)]
 pub(crate) struct VersionName(Arc<str>);
 
 impl From<String> for VersionName {

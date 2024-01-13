@@ -26,5 +26,3 @@ CREATE TABLE visits
 );
 
 CREATE INDEX visit_time_idx ON visits (first_request_time);
-CREATE INDEX visit_version_idx ON visits (version);
-CREATE UNIQUE INDEX visitor_idx ON visits (visitor);

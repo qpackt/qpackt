@@ -22,13 +22,14 @@ use crate::dao::Dao;
 use crate::error::Result;
 use log::debug;
 use rand::{thread_rng, Rng, RngCore};
+use serde::Serialize;
 use std::net::IpAddr;
 use std::ops::Add;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime};
 
 /// Visitor's hash. Created from daily seed, IP address and User-Agent
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize)]
 pub(crate) struct VisitorHash(u64);
 
 impl From<VisitorHash> for i64 {
@@ -37,14 +38,20 @@ impl From<VisitorHash> for i64 {
     }
 }
 
+impl From<i64> for VisitorHash {
+    fn from(value: i64) -> Self {
+        Self(value as u64)
+    }
+}
+
 /// Currently used value to initiate calculating [VisitorHash].
 static CURRENT_INIT: AtomicU64 = AtomicU64::new(0);
 
-/// Refresh [DailySeed] used in calculating [VisitorHash]
+/// Refresh time for [DailySeed] used in calculating [VisitorHash]
 const SEED_REFRESH_SECONDS: u64 = 24 * 60 * 60;
 
 /// Reads [DailySeed] from the DB. If doesn't exist - creates one.
-/// Also, starts a background task to refresh the seed once a day.
+/// Also, starts a background task to refresh the seed every [SEED_REFRESH_SECONDS] seconds.
 pub(crate) async fn init(dao: Dao) -> Result<()> {
     let seed = if let Some(seed) = dao.get_daily_seed().await? { seed } else { create_daily_seed(&dao).await? };
     CURRENT_INIT.store(seed.init, Ordering::Relaxed);
