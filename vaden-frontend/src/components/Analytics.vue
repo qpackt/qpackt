@@ -17,12 +17,58 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-import {get_count} from "../state.js";
+import {onMounted, reactive, ref} from "vue";
+import Calendar from 'primevue/calendar';
+import {getAnalytics, setAnalyticsResults, updateAnalyticsQuery} from "../state.js";
+import axios from "axios";
+import VersionStats from "./VersionStats.vue";
+
+const dateStart = ref(initialPastDate())
+const dateEnd = ref(new Date())
+
+const analytics = reactive(getAnalytics())
+
+function initialPastDate() {
+  let date = new Date()
+  date.setDate(date.getDate() - 7)
+  return date
+}
+
+async function loadAnalytics() {
+  if (analytics.dateStart instanceof Date) {
+    dateStart.value = analytics.dateStart
+    dateEnd.value = analytics.dateEnd
+  } else {
+    let request = {
+      from_time: dateStart.value.toJSON(),
+      to_time: dateEnd.value.toJSON()
+    }
+    await fetchAnalytics(request)
+  }
+}
+
+async function fetchAnalytics(request) {
+  axios.post('/analytics', request).then(r => {
+    setAnalyticsResults({
+      totalVisits: r.data.total_visit_count,
+      stats: r.data.versions_stats,
+    })
+  })
+}
+
+onMounted(() => loadAnalytics())
 </script>
 
 <template>
-  Analytics template
-  Count is {{ get_count() }}
+  <div>
+    Analytics template
+    <Calendar v-model="dateStart" date-format="yy-mm-dd" showTime hourFormat="24" @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
+    <Calendar v-model="dateEnd" date-format="yy-mm-dd" showTime hourFormat="24" @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
+    <div>Total visits: {{analytics.totalVisits}}</div>
+    <div v-for="stat in analytics.stats">
+      <VersionStats :stats="stat"/>
+    </div>
+  </div>
 </template>
 
 <style scoped>

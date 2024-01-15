@@ -23,15 +23,19 @@ import { reactive } from 'vue';
  * This is application state. Implementation provides the same functionality as vuex or redux but with slightly
  * better api. Components are not supposed to have own data but use getters instead.
  * Also, state should not be accessed directly from components. Instead, modification functions should be called.
+ * Each component has its own 'substate' to keep things organized.
  * See examples in components for usage.
  *
  */
 const state = reactive({
-    /**
-     * Each component has its own 'substate' to keep things organized.
+    /** Analytics page state
+     *
      */
-    hello_world: {
-      count: 0,
+    analytics: {
+        dateStart: {},
+        dateEnd: {},
+        totalVisits: 0,
+        stats: [],
     },
     /**
      * /versions page's state
@@ -47,6 +51,20 @@ const state = reactive({
         list: [],
     }
 });
+
+export function getAnalytics() {
+    return state.analytics
+}
+
+export function setAnalyticsResults(analytics) {
+    state.analytics.totalVisits = analytics.totalVisits
+    state.analytics.stats = analytics.stats
+}
+
+export function updateAnalyticsQuery(dateStart, dateEnd) {
+    state.analytics.dateStart = dateStart
+    state.analytics.dateEnd = dateEnd
+}
 
 export function addVersion(name, value) {
     state.versions.list.push({name: name, strategy: value})
@@ -69,11 +87,4 @@ export function listVersions() {
 export function deleteVersions() {
     state.versions.changed = false
     state.versions.list.length = 0
-}
-export async function increase() {
-    state.hello_world.count += 1
-}
-
-export function get_count() {
-    return state.hello_world.count
 }

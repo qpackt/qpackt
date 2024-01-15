@@ -26,7 +26,6 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::Duration;
 
 /// Time in seconds below which a visit is counted as a bounce visit
 const BOUNCE_VISIT_MAX_LENGTH: u64 = 5;
@@ -40,14 +39,15 @@ pub(super) struct AnalyticsRequest {
 #[derive(Serialize)]
 struct AnalyticsResponse {
     total_visit_count: usize,
-    versions_stats: HashMap<VersionName, VersionStats>,
+    versions_stats: Vec<VersionStats>,
 }
 
 /// Stats for single [VersionName].
 #[derive(Serialize)]
 struct VersionStats {
+    name: VersionName,
     average_requests: f32,
-    average_duration: Duration,
+    average_duration: u32,
     bounce_rate: f32,
     visit_count: usize,
 }
@@ -66,6 +66,7 @@ fn convert_to_response(visits: Vec<Visit>) -> AnalyticsResponse {
     // In the first pass add all the numbers
     for visit in &visits {
         let entry = versions_stats.entry(visit.version.clone()).or_insert_with(|| VersionStats {
+            name: visit.version.clone(),
             average_requests: 0.0,
             average_duration: Default::default(),
             bounce_rate: 0.0,
@@ -73,7 +74,7 @@ fn convert_to_response(visits: Vec<Visit>) -> AnalyticsResponse {
         });
         entry.average_requests += visit.request_count as f32;
         let length = visit.last_request_time - visit.first_request_time;
-        entry.average_duration += Duration::from_secs(length);
+        entry.average_duration += length as u32;
         if length < BOUNCE_VISIT_MAX_LENGTH {
             entry.bounce_rate += 1.0;
         }
@@ -83,9 +84,10 @@ fn convert_to_response(visits: Vec<Visit>) -> AnalyticsResponse {
     for stats in versions_stats.values_mut() {
         let visit_count = stats.visit_count as f32;
         stats.average_requests /= visit_count;
-        stats.average_duration = Duration::from_secs_f32(stats.average_duration.as_secs_f32() / visit_count);
+        stats.average_duration = (stats.average_duration as f32 / visit_count) as u32;
         stats.bounce_rate = 100.0 * (stats.bounce_rate / visit_count);
     }
-
+    let mut versions_stats: Vec<_> = versions_stats.into_values().collect();
+    versions_stats.sort_by(|v1, v2| v1.name.cmp(&v2.name));
     AnalyticsResponse { total_visit_count, versions_stats }
 }

@@ -17,7 +17,7 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-import {addVersion, deleteVersions, increase, listVersions} from "../state.js";
+import {addVersion, deleteVersions, listVersions} from "../state.js";
   import {useToast} from "primevue/usetoast";
   import {onMounted, reactive} from "vue";
   import Toast from "primevue/toast";
@@ -62,7 +62,6 @@ import {addVersion, deleteVersions, increase, listVersions} from "../state.js";
 
 <template>
   Versions template
-  <button type="button" @click="increase">Click me</button>
   <div class="card">
     <Toast />
     <FileUpload name="demo[]" url="/upload-version" @upload="onAdvancedUpload($event)" :multiple="false" accept=".zip">
