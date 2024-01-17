@@ -39,7 +39,7 @@ pub(crate) struct Config {
     /// Host and port for HTTP (not SSL) traffic
     http_proxy: String, // TODO change this to sockaddr or something.
     /// Host and port for HTTPS traffic
-    https_proxy: String,
+    https_proxy: Option<String>,
     /// Administrator's password encoded in `scrypt` format
     password: String,
     /// Host and port for administrator's panel.
@@ -62,7 +62,9 @@ impl Config {
         let mut config = String::with_capacity(1024);
         write!(&mut config, "{}: {}\r\n", DOMAIN, self.domain)?;
         write!(&mut config, "{}: {}\r\n", HTTP_PROXY, self.http_proxy)?;
-        write!(&mut config, "{}: {}\r\n", HTTPS_PROXY, self.https_proxy)?;
+        if let Some(https_proxy) = self.https_proxy.as_ref() {
+            write!(&mut config, "{}: {}\r\n", HTTPS_PROXY, https_proxy)?;
+        }
         write!(&mut config, "{}: {}\r\n", PASSWORD, self.password)?;
         write!(&mut config, "{}: {}\r\n", ADMIN_PANEL, self.admin_panel)?;
         write!(
@@ -80,12 +82,17 @@ impl Config {
         let content = fs::read_to_string(path).await?;
         let yaml = &YamlLoader::load_from_str(&content)?[0];
         Ok(Self {
-            domain: from_yaml(DOMAIN, yaml)?,
-            http_proxy: from_yaml(HTTP_PROXY, yaml)?,
+            domain: from_yaml(DOMAIN, yaml)?.ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", DOMAIN).to_string()))?,
+            http_proxy: from_yaml(HTTP_PROXY, yaml)?
+                .ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", HTTP_PROXY).to_string()))?,
             https_proxy: from_yaml(HTTPS_PROXY, yaml)?,
-            password: from_yaml(PASSWORD, yaml)?,
-            admin_panel: from_yaml(ADMIN_PANEL, yaml)?,
-            run_directory: from_yaml(RUN_DIR, yaml)?.into(),
+            password: from_yaml(PASSWORD, yaml)?
+                .ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", PASSWORD).to_string()))?,
+            admin_panel: from_yaml(ADMIN_PANEL, yaml)?
+                .ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", ADMIN_PANEL).to_string()))?,
+            run_directory: from_yaml(RUN_DIR, yaml)?
+                .ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", RUN_DIR).to_string()))?
+                .into(),
         })
     }
 
@@ -97,7 +104,7 @@ impl Config {
         &self.admin_panel
     }
 
-    pub(crate) fn proxy_addr(&self) -> &str {
+    pub(crate) fn http_proxy_addr(&self) -> &str {
         &self.http_proxy
     }
 
@@ -105,7 +112,7 @@ impl Config {
     fn new() -> Result<Config> {
         let domain = read_stdin("Domain")?;
         let http_proxy = read_stdin("Ip/port for HTTP traffic (default 0.0.0.0:8080)")?;
-        let https_proxy = read_stdin("Ip/port for HTTPS traffic (default 0.0.0.0:8443)")?;
+        let https_proxy = read_stdin("Ip/port for HTTPS traffic (leave empty for no HTTPS)")?;
         // TODO read twice, disable echoing.
         let password = read_stdin("Administrator's password")?;
         let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
@@ -113,16 +120,23 @@ impl Config {
         Ok(Config {
             domain,
             http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
-            https_proxy: if_empty_then(https_proxy, "0.0.0.0:8443"),
+            https_proxy: if https_proxy.is_empty() { None } else { Some(https_proxy) },
             password: hash_password(password)?,
             admin_panel: if_empty_then(admin, "0.0.0.0:8444"),
             run_directory: if_empty_then(run_directory, "/var/run/vaden").into(),
         })
     }
+
+    pub(crate) fn domain(&self) -> &str {
+        &self.domain
+    }
+    pub(crate) fn https_proxy_addr(&self) -> Option<&String> {
+        self.https_proxy.as_ref()
+    }
 }
 
-fn from_yaml(value: &str, yaml: &Yaml) -> Result<String> {
-    Ok(yaml[value].as_str().ok_or(VadenError::InvalidConfig(format!("Missing config value `{}`", value)))?.to_string())
+fn from_yaml(value: &str, yaml: &Yaml) -> Result<Option<String>> {
+    Ok(yaml[value].clone().into_string())
 }
 
 fn read_stdin(prompt: &str) -> Result<String> {

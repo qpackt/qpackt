@@ -5,10 +5,12 @@ edition = "2021"
 authors = ["Łukasz Wojtów <lukasz.wojtow@gmail.com>"]
 license = "AGPL-3.0"
 
+
 [dependencies]
+acme-lib = "0.9"
 actix-files = "0.6"
 actix-multipart = "0.6"
-actix-web = "4"
+actix-web = { version = "4", features = ["rustls-0_21"] }
 awc = "3"
 chrono = {version = "0.4", features = ["serde"]}
 env_logger = "0.10"
@@ -24,3 +26,4 @@ tokio = {version = "1", features = ["full"]}
 url = "2"
 yaml-rust = "0.4"
 zip = "0.6"
+rustls = "0.21.10"

@@ -37,7 +37,6 @@ mod versions;
 pub(super) fn start_panel_http(config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> JoinHandle<std::io::Result<()>> {
     tokio::spawn({
         let app_config = config.clone();
-        let versions = versions.clone();
         HttpServer::new(move || {
             App::new()
                 .app_data(app_config.clone())

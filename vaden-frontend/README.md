@@ -17,3 +17,18 @@ npm run build
 ```bash
 npm run dev
 ```
+
+For debian install pkg-config
+For ubuntu install libssl-dev
+Forwarding:
+sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+sudo iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8443
+sudo sysctl -w net.ipv4.ip_forward=1
+
+Use whatever you're using to make these rules persistent after restart.
+
+serving files via localhost
+sudo iptables -A INPUT -i lo -j ACCEPT
+
+panel:
+sudo iptables -A INPUT -p tcp --dport 8444 -j ACCEPT

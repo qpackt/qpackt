@@ -42,6 +42,7 @@ mod panel;
 mod password;
 mod proxy;
 mod server;
+mod ssl;
 
 use crate::analytics::writer::RequestWriter;
 use crate::config::Config;
@@ -50,16 +51,20 @@ use crate::dao::Dao;
 use crate::error::Result;
 use crate::error::VadenError;
 use crate::panel::start_panel_http;
-use crate::proxy::start_proxy_http;
+use crate::proxy::{start_proxy_http, start_proxy_https};
 use crate::server::Versions;
+use crate::ssl::challenge::AcmeChallenge;
+use crate::ssl::get_certificate;
+use crate::ssl::resolver::try_build_resolver;
 use actix_web::web::Data;
-use log::{error, info};
+use log::info;
+use rustls::ServerConfig;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
-use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
@@ -73,19 +78,15 @@ async fn main() {
         let writer = RequestWriter::new(dao.clone());
         analytics::hash::init(dao.clone()).await.unwrap();
         let versions = dao.list_versions().await.unwrap();
-        let (panel_handle, proxy_handle) = start_http(config, dao, versions, writer).await;
-        wait(panel_handle, proxy_handle).await;
+        start_http(config, dao, versions, writer).await;
+        wait().await;
     } else {
         Config::create().await;
     }
 }
 
-/// Waits on things like http servers and signals.
-/// This function should never exit. When waiting is done that
-/// means either there was some problem with one of http server
-/// or some signal was received.
-/// SIGHUP is not supported yet.
-async fn wait(panel_handle: JoinHandle<std::io::Result<()>>, proxy_handle: JoinHandle<std::io::Result<()>>) -> ! {
+/// Waits for signal and exits
+async fn wait() -> ! {
     let mut signal_interrupt = signal(SignalKind::interrupt()).unwrap();
     let mut signal_terminate = signal(SignalKind::terminate()).unwrap();
 
@@ -98,32 +99,29 @@ async fn wait(panel_handle: JoinHandle<std::io::Result<()>>, proxy_handle: JoinH
             info!("received SIGTERM, exiting...");
             tokio::time::sleep(Duration::from_millis(100)).await;
         },
-        _ = proxy_handle => {
-            error!("Proxy exited");
-        },
-        _ = panel_handle => {
-            error!("Panel exited");
-        }
     }
     std::process::exit(0);
 }
 
-/// Starts two actix processes to serve admin's panel and http proxy.
-/// Returns two join handles so later they can be awaited.
-async fn start_http(
-    config: Config,
-    dao: Dao,
-    versions: Vec<Version>,
-    writer: RequestWriter,
-) -> (JoinHandle<std::io::Result<()>>, JoinHandle<std::io::Result<()>>) {
+/// Starts actix processes to serve admin's panel and http proxy.
+async fn start_http(config: Config, dao: Dao, versions: Vec<Version>, writer: RequestWriter) {
     let config = Data::new(config);
     let servers = Versions::start(versions, config.app_run_directory()).await;
     let dao = Data::new(dao);
     let servers = Data::new(servers);
     let writer = Data::new(writer);
-    let panel_handle = start_panel_http(config.clone(), dao, servers.clone());
-    let proxy_handle = start_proxy_http(config.proxy_addr(), servers, writer);
-    (panel_handle, proxy_handle)
+    let ssl_challenge = AcmeChallenge::new().await;
+    start_proxy_http(config.http_proxy_addr(), servers.clone(), writer.clone(), Data::new(ssl_challenge.clone()));
+    start_panel_http(config.clone(), dao, servers.clone());
+
+    if let Some(https_proxy_addr) = config.https_proxy_addr() {
+        let certificate = get_certificate(config.domain(), config.app_run_directory(), ssl_challenge.clone()).await;
+        ssl_challenge.clear().await;
+        let resolver = try_build_resolver(certificate);
+        let config = ServerConfig::builder().with_safe_defaults().with_no_client_auth();
+        let server_config = config.with_cert_resolver(Arc::new(resolver));
+        start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), server_config).await;
+    }
 }
 
 fn ensure_app_dir_exists(path: &Path) -> Result<()> {
