@@ -1,8 +1,0 @@
-domain: vaden-test-development.com
-http_proxy: 0.0.0.0:8080
-#Uncomment `https_proxy` to get ssl certificate at startup
-#https_proxy: 0.0.0.0:8443
-# Password is "admin". Used in tests.
-password: $scrypt$ln=17,r=8,p=1$H63UY378M+ql3bpQMQ37aQ$XXt3kOaWrW/CQr+/lPIDtPlPTLJSHbaaGBEVo3l3wFY
-admin_panel: 0.0.0.0:8444
-run_directory: test_run_directory

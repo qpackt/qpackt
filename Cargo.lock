@@ -1686,6 +1686,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "qpackt-backend"
+version = "0.1.0"
+dependencies = [
+ "acme-lib",
+ "actix-files",
+ "actix-multipart",
+ "actix-web",
+ "awc",
+ "chrono",
+ "env_logger",
+ "futures",
+ "log",
+ "rand",
+ "rustls",
+ "scrypt",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "url",
+ "yaml-rust",
+ "zip",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2598,32 +2624,6 @@ name = "v_htmlescape"
 version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e8257fbc510f0a46eb602c10215901938b5c2a7d5e70fc11483b1d3c9b5b18c"
-
-[[package]]
-name = "vaden-backend"
-version = "0.1.0"
-dependencies = [
- "acme-lib",
- "actix-files",
- "actix-multipart",
- "actix-web",
- "awc",
- "chrono",
- "env_logger",
- "futures",
- "log",
- "rand",
- "rustls",
- "scrypt",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "url",
- "yaml-rust",
- "zip",
-]
 
 [[package]]
 name = "vcpkg"

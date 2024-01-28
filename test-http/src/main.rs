@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 /*
-   Vaden: Versioned Application Deployment Engine
+   qpackt: Web & Analytics Server
    Copyright (C) 2023 Łukasz Wojtów
 
    This program is free software: you can redistribute it and/or modify

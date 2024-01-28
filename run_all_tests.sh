@@ -3,9 +3,9 @@
 # Compiles backend server, waits for successful start.
 function start_backend() {
   (
-    cd vaden-backend || exit
+    cd qpackt-backend || exit
     mkdir test_run_directory
-    cargo r -r -- vaden.yaml &
+    cargo r -r -- qpackt.yaml &
     while :;
     do
       if curl localhost:8444/static/ > /dev/null 2>&1; then break ; fi
@@ -16,8 +16,8 @@ function start_backend() {
 
 function stop_backend() {
     (
-      cd vaden-backend || exit
-      killall vaden-backend
+      cd qpackt-backend || exit
+      killall qpackt-backend
     )
 }
 
