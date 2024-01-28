@@ -26,6 +26,7 @@ use rustls::sign::{any_supported_type, CertifiedKey};
 use rustls::PrivateKey;
 use std::sync::Arc;
 
+/// Resolver that can be used to bind tls with actix.
 pub(crate) fn try_build_resolver(certificate: Certificate) -> CertResolver {
     debug!("Building TLS resolver");
     let der = certificate.certificate_der();

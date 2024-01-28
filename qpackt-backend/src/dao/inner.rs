@@ -25,13 +25,14 @@ pub(super) struct DaoInner {
 }
 
 impl DaoInner {
-    /// Sqlite doesn't support concurrent writes. To prevent simultaneous , writes are possible only when
+    /// Sqlite doesn't support concurrent writes. To prevent simultaneous access, writes are possible only when
     /// write lock to rw_url is held.
     pub(super) fn init(path: &str) -> Self {
         let rw_url = format!("sqlite://{path}?mode=rwc");
         let ro_url = format!("sqlite://{path}?mode=ro");
         Self { rw_url: RwLock::new(rw_url), ro_url: RwLock::new(ro_url) }
     }
+
     pub(super) async fn get_read_only_url(&self) -> RwLockReadGuard<'_, String> {
         self.ro_url.read().await
     }

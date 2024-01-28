@@ -28,6 +28,7 @@ use acme_lib::{Directory, DirectoryUrl};
 use log::{debug, info};
 use std::path::PathBuf;
 
+/// Tries to load existing certificate from run directory. If not found then ask LetsEncrypt.
 pub(crate) async fn get_certificate(domain: &str, path: &PathBuf, acme_challenge: AcmeChallenge) -> Certificate {
     debug!("Getting TLS certificate");
     let acc = get_account(path, domain);
@@ -115,6 +116,10 @@ pub(crate) async fn get_certificate(domain: &str, path: &PathBuf, acme_challenge
     cert
 }
 
+
+/// Reads the private account key from persistence, or
+/// creates a new one before accessing the API to establish
+/// that it's there.
 fn get_account(path: &PathBuf, domain: &str) -> Account<FilePersist> {
     debug!("Getting TLS account");
     // Use DirectoryUrl::LetsEncryptStaging for dev/testing.
@@ -127,8 +132,5 @@ fn get_account(path: &PathBuf, domain: &str) -> Account<FilePersist> {
     // Create a directory entrypoint.
     let dir = Directory::from_url(persist, url).unwrap();
 
-    // Reads the private account key from persistence, or
-    // creates a new one before accessing the API to establish
-    // that it's there.
     dir.account(format!("admin@{}", domain).as_str()).unwrap()
 }

@@ -20,12 +20,16 @@
 use std::collections::HashMap;
 use tokio::sync::mpsc::{Receiver, Sender};
 
+
+/// Acme challenge store implemented as actor pattern.
 #[derive(Clone)]
 pub(crate) struct AcmeChallenge {
     sender: Sender<AcmeChallengeMessage>,
 }
 
 impl AcmeChallenge {
+
+    /// Creates new actor and starts task serving messages.
     pub(crate) async fn new() -> Self {
         let (sender, receiver) = tokio::sync::mpsc::channel(16);
         spawn_receiver_task(receiver);
@@ -42,6 +46,7 @@ impl AcmeChallenge {
         self.sender.send(AcmeChallengeMessage::SetProof(token, proof)).await.unwrap();
     }
 
+    /// Clears challenges token/proof storage.
     pub(crate) async fn clear(&self) {
         self.sender.send(AcmeChallengeMessage::Clear).await.unwrap();
     }
