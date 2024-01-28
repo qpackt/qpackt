@@ -20,7 +20,7 @@
 use crate::dao::requests::DailySeed;
 use crate::dao::Dao;
 use crate::error::Result;
-use log::debug;
+use log::{debug, info};
 use rand::{thread_rng, Rng, RngCore};
 use serde::Serialize;
 use std::net::IpAddr;
@@ -50,7 +50,7 @@ static CURRENT_INIT: AtomicU64 = AtomicU64::new(0);
 /// Refresh time for [DailySeed] used in calculating [VisitorHash]
 const SEED_REFRESH_SECONDS: u64 = 24 * 60 * 60;
 
-/// Reads [DailySeed] from the DB. If doesn't exist - creates one.
+/// Reads [DailySeed] from the DB. If it doesn't exist - creates one.
 /// Also, starts a background task to refresh the seed every [SEED_REFRESH_SECONDS] seconds.
 pub(crate) async fn init(dao: Dao) -> Result<()> {
     let seed = if let Some(seed) = dao.get_daily_seed().await? { seed } else { create_daily_seed(&dao).await? };
@@ -59,14 +59,20 @@ pub(crate) async fn init(dao: Dao) -> Result<()> {
     Ok(())
 }
 
-/// Creates a new [VisitorHash] from least significant bits of IP octet bytes and provided ident.
+/// Creates a new [VisitorHash] from the least significant bits of IP octet bytes and provided ident.
 pub(crate) fn create(ip: IpAddr, ident: Vec<u8>) -> VisitorHash {
-    let mut hash = CURRENT_INIT.load(Ordering::Relaxed);
+    let init = CURRENT_INIT.load(Ordering::Relaxed);
+    create_from_init(&ip, &ident, init)
+}
+
+fn create_from_init(ip: &IpAddr, ident: &Vec<u8>, init: u64) -> VisitorHash {
+    let mut hash = init;
     match &ip {
         IpAddr::V4(addr) => multiply(&mut hash, addr.octets().as_slice()),
         IpAddr::V6(addr) => multiply(&mut hash, addr.octets().as_slice()),
     };
-    multiply(&mut hash, &ident);
+    multiply(&mut hash, ident);
+    info!("HASH {} {} {} {:?}", init, ip, hash, ident);
     VisitorHash(hash)
 }
 
@@ -92,7 +98,7 @@ fn spawn_refresh_loop(dao: Dao, seed: DailySeed) {
 
 fn multiply(hash: &mut u64, bytes: &[u8]) {
     for byte in bytes {
-        let (new, _) = hash.overflowing_mul((byte & 0b00001111) as u64);
+        let new = hash.overflowing_mul(67280421310721).0 + (byte & 0b00111111) as u64;
         if new != 0 {
             *hash = new;
         }
@@ -103,4 +109,39 @@ async fn create_daily_seed(dao: &Dao) -> Result<DailySeed> {
     let seed = DailySeed { init: thread_rng().next_u64(), expiration: SystemTime::now().add(Duration::from_secs(SEED_REFRESH_SECONDS)) };
     dao.save_daily_seed(&seed).await?;
     Ok(seed)
+}
+
+#[cfg(test)]
+mod test {
+    use crate::analytics::hash::create_from_init;
+    use rand::{thread_rng, Rng, RngCore};
+    use std::collections::HashSet;
+    use std::net::IpAddr;
+
+    #[test]
+    fn test_conflicts() {
+        const COUNT: usize = 1_000_000;
+        let mut hashes = HashSet::with_capacity(COUNT);
+        let init = thread_rng().next_u64();
+        for _ in 0..COUNT {
+            let hash = create_from_init(&random_ip(), &random_ident(), init);
+            hashes.insert(hash);
+        }
+        let conflicts = COUNT - hashes.len();
+        // Make sure conflicts happen less often than 1:100k. So in other words, less than 1 in 100k (0.001%) visits will
+        // be recognized as a continuation of some other visit.
+        assert!(COUNT / conflicts > 100_000);
+    }
+
+    fn random_ip() -> IpAddr {
+        IpAddr::from([random_byte(), random_byte(), random_byte(), random_byte()])
+    }
+
+    fn random_ident() -> Vec<u8> {
+        let len = thread_rng().gen_range(0..128);
+        (0..len).map(|_| random_byte()).collect()
+    }
+    fn random_byte() -> u8 {
+        thread_rng().gen_range(0..=255)
+    }
 }
