@@ -37,6 +37,7 @@ mod config;
 pub mod constants;
 pub mod dao;
 mod error;
+mod https_redirect;
 mod manager;
 mod panel;
 mod password;
@@ -45,7 +46,7 @@ mod server;
 mod ssl;
 
 use crate::analytics::writer::RequestWriter;
-use crate::config::Config;
+use crate::config::QpacktConfig;
 use crate::dao::version::Version;
 use crate::dao::Dao;
 use crate::error::QpacktError;
@@ -54,12 +55,13 @@ use crate::panel::start_panel_http;
 use crate::proxy::{start_proxy_http, start_proxy_https};
 use crate::server::Versions;
 use crate::ssl::challenge::AcmeChallenge;
-use crate::ssl::get_certificate;
 use crate::ssl::resolver::try_build_resolver;
+use crate::ssl::{get_certificate, FORCE_HTTPS_REDIRECT};
 use actix_web::web::Data;
 use log::info;
 use rustls::ServerConfig;
 use std::path::Path;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use std::{env, fs};
@@ -72,7 +74,7 @@ async fn main() {
     env_logger::init();
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
-        let config = Config::read(config_path).await.unwrap();
+        let config = QpacktConfig::read(config_path).await.unwrap();
         ensure_app_dir_exists(config.app_run_directory()).unwrap();
         let dao = Dao::init(config.app_run_directory()).await.unwrap();
         let writer = RequestWriter::new(dao.clone());
@@ -81,7 +83,7 @@ async fn main() {
         start_http(config, dao, versions, writer).await;
         wait().await;
     } else {
-        Config::create().await;
+        QpacktConfig::create().await;
     }
 }
 
@@ -104,23 +106,24 @@ async fn wait() -> ! {
 }
 
 /// Starts actix processes to serve admin's panel and http proxy.
-async fn start_http(config: Config, dao: Dao, versions: Vec<Version>, writer: RequestWriter) {
-    let config = Data::new(config);
-    let servers = Versions::start(versions, config.app_run_directory()).await;
+async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version>, writer: RequestWriter) {
+    let qpackt_config = Data::new(qpackt_config);
+    let servers = Versions::start(versions, qpackt_config.app_run_directory()).await;
     let dao = Data::new(dao);
     let servers = Data::new(servers);
     let writer = Data::new(writer);
     let ssl_challenge = AcmeChallenge::new().await;
-    start_proxy_http(config.http_proxy_addr(), servers.clone(), writer.clone(), Data::new(ssl_challenge.clone()));
-    start_panel_http(config.clone(), dao, servers.clone());
+    start_proxy_http(qpackt_config.http_proxy_addr(), servers.clone(), writer.clone(), Data::new(ssl_challenge.clone()));
+    start_panel_http(qpackt_config.clone(), dao.clone(), servers.clone(), None);
 
-    if let Some(https_proxy_addr) = config.https_proxy_addr() {
-        let certificate = get_certificate(config.domain(), config.app_run_directory(), ssl_challenge.clone()).await;
+    if let Some(https_proxy_addr) = qpackt_config.https_proxy_addr() {
+        let certificate = get_certificate(qpackt_config.domain(), qpackt_config.app_run_directory(), ssl_challenge.clone()).await;
         ssl_challenge.clear().await;
         let resolver = try_build_resolver(certificate);
-        let config = ServerConfig::builder().with_safe_defaults().with_no_client_auth();
-        let server_config = config.with_cert_resolver(Arc::new(resolver));
-        start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), server_config).await;
+        let tls_config = ServerConfig::builder().with_safe_defaults().with_no_client_auth().with_cert_resolver(Arc::new(resolver));
+        FORCE_HTTPS_REDIRECT.store(true, Ordering::Relaxed);
+        start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), tls_config.clone());
+        start_panel_http(qpackt_config, dao, servers.clone(), Some(tls_config));
     }
 }
 

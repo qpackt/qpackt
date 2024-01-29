@@ -17,5 +17,5 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/// Subdirectory for site's versions (inside [crate::config::Config::run_directory]).
+/// Subdirectory for site's versions (inside [crate::config::QpacktConfig::run_directory]).
 pub const VERSIONS_SUBDIRECTORY: &str = "sites";

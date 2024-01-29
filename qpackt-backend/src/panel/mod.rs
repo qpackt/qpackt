@@ -17,8 +17,9 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::config::Config;
+use crate::config::QpacktConfig;
 use crate::dao::Dao;
+use crate::https_redirect::CheckHttpsRedirect;
 use crate::panel::analytics::get_analytics;
 use crate::panel::versions::delete::delete_version;
 use crate::panel::versions::list::list_versions;
@@ -28,17 +29,21 @@ use crate::server::Versions;
 use actix_files::Files;
 use actix_web::web::{Data, Json};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use rustls::ServerConfig;
 use serde::Serialize;
-use tokio::task::JoinHandle;
 
 mod analytics;
 mod versions;
 
-pub(super) fn start_panel_http(config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> JoinHandle<std::io::Result<()>> {
+const PANEL_HTTP: &str = "0.0.0.0:9080";
+const PANEL_HTTPS: &str = "0.0.0.0:9443";
+
+pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>, tls_config: Option<ServerConfig>) {
     tokio::spawn({
         let app_config = config.clone();
-        HttpServer::new(move || {
+        let server = HttpServer::new(move || {
             App::new()
+                .wrap(CheckHttpsRedirect {})
                 .app_data(app_config.clone())
                 .app_data(versions.clone())
                 .app_data(dao.clone())
@@ -49,11 +54,12 @@ pub(super) fn start_panel_http(config: Data<Config>, dao: Data<Dao>, versions: D
                 .service(web::resource("/delete-version/{name}").route(web::delete().to(delete_version)))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", "../qpackt-frontend/dist").index_file("index.html"))
-        })
-        .bind(config.panel_addr())
-        .unwrap()
-        .run()
-    })
+        });
+        match tls_config {
+            None => server.bind(PANEL_HTTP).unwrap().run(),
+            Some(tls_config) => server.bind_rustls_021(PANEL_HTTPS, tls_config).unwrap().run(),
+        }
+    });
 }
 
 fn json_response<T>(request: &HttpRequest, content: T) -> HttpResponse

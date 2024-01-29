@@ -17,7 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::config::Config;
+use crate::config::QpacktConfig;
 use crate::constants::VERSIONS_SUBDIRECTORY;
 use crate::dao::version::{Version, VersionName};
 use crate::dao::Dao;
@@ -40,7 +40,7 @@ use std::time::SystemTime;
 
 /// Uploads new site's version as a zip file, unpacks it and registers in database.
 /// The site can be served after the upload.
-pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> HttpResponse {
+pub(crate) async fn upload_version(payload: Multipart, config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>) -> HttpResponse {
     match serve_request(payload, config, dao, versions).await {
         Ok(name) => {
             info!("Registered new version: {}", name);
@@ -53,7 +53,7 @@ pub(crate) async fn upload_version(payload: Multipart, config: Data<Config>, dao
     }
 }
 
-async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<Dao>, versions: Data<Versions>) -> Result<VersionName> {
+async fn serve_request(mut payload: Multipart, config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>) -> Result<VersionName> {
     let field = payload
         .try_next()
         .await
@@ -65,14 +65,14 @@ async fn serve_request(mut payload: Multipart, config: Data<Config>, dao: Data<D
     Ok(name)
 }
 
-async fn save_version(field: Field, config: &Config, dao: &Dao) -> Result<Version> {
+async fn save_version(field: Field, config: &QpacktConfig, dao: &Dao) -> Result<Version> {
     let name = create_name();
     let target = create_path(config, &name)?;
     let zip_path = wait_for_content(field, &target).await?;
     unzip_and_register(&zip_path, &target, name, config.app_run_directory(), dao).await
 }
 
-fn create_path(config: &Config, name: &VersionName) -> Result<PathBuf> {
+fn create_path(config: &QpacktConfig, name: &VersionName) -> Result<PathBuf> {
     let path = config.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(name.to_string());
     fs::create_dir_all(&path)?;
     Ok(path)

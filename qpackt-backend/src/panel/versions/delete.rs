@@ -17,7 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::config::Config;
+use crate::config::QpacktConfig;
 use crate::constants::VERSIONS_SUBDIRECTORY;
 use crate::dao::Dao;
 use crate::server::Versions;
@@ -28,7 +28,7 @@ use log::{debug, info, warn};
 use std::fs;
 
 /// Deletes site's version from file system and the database.
-pub(crate) async fn delete_version(name: Path<String>, dao: Data<Dao>, app: Data<Config>, versions: Data<Versions>) -> HttpResponse {
+pub(crate) async fn delete_version(name: Path<String>, dao: Data<Dao>, app: Data<QpacktConfig>, versions: Data<Versions>) -> HttpResponse {
     debug!("Deleting version {}", name);
     match dao.delete_version(&name).await {
         Ok(path) => {

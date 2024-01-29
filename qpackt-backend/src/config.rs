@@ -28,12 +28,11 @@ const DOMAIN: &str = "domain";
 const HTTP_PROXY: &str = "http_proxy";
 const HTTPS_PROXY: &str = "https_proxy";
 const PASSWORD: &str = "password";
-const ADMIN_PANEL: &str = "admin_panel";
 const RUN_DIR: &str = "run_directory";
 
 /// Main qpackt config.
 #[derive(Clone, Debug)]
-pub(crate) struct Config {
+pub(crate) struct QpacktConfig {
     /// Domain for which traffic should be accepted. Needed to request SSL certificate.
     domain: String,
     /// Host and port for HTTP (not SSL) traffic
@@ -42,16 +41,14 @@ pub(crate) struct Config {
     https_proxy: Option<String>,
     /// Administrator's password encoded in `scrypt` format
     password: String,
-    /// Host and port for administrator's panel.
-    admin_panel: String,
     /// Directory to hold database, docker images etc...
     run_directory: PathBuf,
 }
 
-impl Config {
+impl QpacktConfig {
     /// Creates config by asking questions via stdin/out.
     pub(super) async fn create() {
-        let config = Config::new().unwrap();
+        let config = QpacktConfig::new().unwrap();
         let path = "qpackt.yaml";
         config.save(path).await.unwrap();
         println!("Config file saved in {}", path);
@@ -66,7 +63,6 @@ impl Config {
             write!(&mut config, "{}: {}\r\n", HTTPS_PROXY, https_proxy)?;
         }
         write!(&mut config, "{}: {}\r\n", PASSWORD, self.password)?;
-        write!(&mut config, "{}: {}\r\n", ADMIN_PANEL, self.admin_panel)?;
         write!(
             &mut config,
             "{}: {}\r\n",
@@ -88,8 +84,6 @@ impl Config {
             https_proxy: from_yaml(HTTPS_PROXY, yaml)?,
             password: from_yaml(PASSWORD, yaml)?
                 .ok_or(QpacktError::InvalidConfig(format!("Missing config value `{}`", PASSWORD).to_string()))?,
-            admin_panel: from_yaml(ADMIN_PANEL, yaml)?
-                .ok_or(QpacktError::InvalidConfig(format!("Missing config value `{}`", ADMIN_PANEL).to_string()))?,
             run_directory: from_yaml(RUN_DIR, yaml)?
                 .ok_or(QpacktError::InvalidConfig(format!("Missing config value `{}`", RUN_DIR).to_string()))?
                 .into(),
@@ -100,29 +94,24 @@ impl Config {
         &self.run_directory
     }
 
-    pub(crate) fn panel_addr(&self) -> &str {
-        &self.admin_panel
-    }
 
     pub(crate) fn http_proxy_addr(&self) -> &str {
         &self.http_proxy
     }
 
     /// Builds new config from stdin questions with some sane defaults.
-    fn new() -> Result<Config> {
+    fn new() -> Result<QpacktConfig> {
         let domain = read_stdin("Domain")?;
         let http_proxy = read_stdin("Ip/port for HTTP traffic (default 0.0.0.0:8080)")?;
         let https_proxy = read_stdin("Ip/port for HTTPS traffic (leave empty for no HTTPS)")?;
         // TODO read twice, disable echoing.
         let password = read_stdin("Administrator's password")?;
-        let admin = read_stdin("Ip/port for admin panel (default 0.0.0.0:8444)")?;
         let run_directory = read_stdin("Run directory (default /var/run/qpackt)")?;
-        Ok(Config {
+        Ok(QpacktConfig {
             domain,
             http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
             https_proxy: if https_proxy.is_empty() { None } else { Some(https_proxy) },
             password: hash_password(password)?,
-            admin_panel: if_empty_then(admin, "0.0.0.0:8444"),
             run_directory: if_empty_then(run_directory, "/var/run/qpackt").into(),
         })
     }

@@ -17,6 +17,9 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+/// Force panel and proxy redirect when ssl becomes available.
+pub(crate) static FORCE_HTTPS_REDIRECT: AtomicBool = AtomicBool::new(false);
+
 pub(crate) mod challenge;
 pub(crate) mod resolver;
 
@@ -27,6 +30,7 @@ use acme_lib::{Account, Certificate};
 use acme_lib::{Directory, DirectoryUrl};
 use log::{debug, info};
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 
 /// Tries to load existing certificate from run directory. If not found then ask LetsEncrypt.
 pub(crate) async fn get_certificate(domain: &str, path: &PathBuf, acme_challenge: AcmeChallenge) -> Certificate {

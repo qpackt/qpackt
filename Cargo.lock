@@ -1697,6 +1697,7 @@ dependencies = [
  "chrono",
  "env_logger",
  "futures",
+ "futures-util",
  "log",
  "rand",
  "rustls",
