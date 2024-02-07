@@ -14,7 +14,7 @@ use tokio::task::JoinHandle;
 use url::Url;
 
 /// All servers for versions will be started on localhost:port where starting port is the value below.
-const START_PORT: u16 = 9000;
+const START_PORT: u16 = 10_000;
 
 /// Contains details for various versions' servers.  
 pub(crate) struct Versions {

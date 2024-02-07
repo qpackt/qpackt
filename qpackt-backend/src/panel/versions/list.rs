@@ -18,18 +18,19 @@
 */
 
 use crate::dao::Dao;
-use crate::panel::json_response;
-use actix_web::web::Data;
-use actix_web::{HttpRequest, HttpResponse};
-use awc::http::StatusCode;
+use crate::error::Result;
+use crate::panel::validate_permission;
+use actix_web::web::{Data, Json};
+use actix_web::{HttpRequest, Responder};
 use log::error;
 
-pub(crate) async fn list_versions(request: HttpRequest, dao: Data<Dao>) -> HttpResponse {
+pub(crate) async fn list_versions(request: HttpRequest, dao: Data<Dao>) -> Result<impl Responder> {
+    validate_permission(&request)?;
     match dao.list_versions().await {
-        Ok(versions) => json_response(&request, versions),
+        Ok(versions) => Ok(Json(versions)),
         Err(e) => {
             error!("Unable to list versions: {}", e.to_string());
-            HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR)
+            Err(e)
         }
     }
 }

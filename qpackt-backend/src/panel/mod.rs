@@ -19,20 +19,26 @@
 
 use crate::config::QpacktConfig;
 use crate::dao::Dao;
+use crate::error::{QpacktError, Result};
 use crate::https_redirect::CheckHttpsRedirect;
 use crate::panel::analytics::get_analytics;
+use crate::panel::auth::token::{invalidate_token, is_token_valid};
 use crate::panel::versions::delete::delete_version;
 use crate::panel::versions::list::list_versions;
 use crate::panel::versions::update::update_versions;
 use crate::panel::versions::upload::upload_version;
 use crate::server::Versions;
 use actix_files::Files;
-use actix_web::web::{Data, Json};
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::http::header;
+use actix_web::web::Data;
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use auth::token::get_token;
+use awc::http::StatusCode;
+use log::warn;
 use rustls::ServerConfig;
-use serde::Serialize;
 
 mod analytics;
+pub(crate) mod auth;
 mod versions;
 
 const PANEL_HTTP: &str = "0.0.0.0:9080";
@@ -52,6 +58,8 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
                 .service(web::resource("/list-versions").route(web::get().to(list_versions)))
                 .service(web::resource("/analytics").route(web::post().to(get_analytics)))
                 .service(web::resource("/delete-version/{name}").route(web::delete().to(delete_version)))
+                .service(web::resource("/token").route(web::post().to(get_token)))
+                .service(web::resource("/token").route(web::delete().to(invalidate_token)))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", "../qpackt-frontend/dist").index_file("index.html"))
         });
@@ -62,9 +70,22 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
     });
 }
 
-fn json_response<T>(request: &HttpRequest, content: T) -> HttpResponse
-where
-    T: Serialize,
-{
-    Json(content).respond_to(request).map_into_boxed_body()
+/// Gets token from 'Authorization: Bearer ...' header.
+/// If token is valid then returns HTTP::OK. If token not valid then returns an error.
+/// Designed to be used with question mark `validate_permission(...)?` at the beginning
+/// of privileged calls.
+fn validate_permission(request: &HttpRequest) -> Result<HttpResponse> {
+    let Some(header) = request.headers().get(header::AUTHORIZATION) else {
+        return Err(QpacktError::Forbidden);
+    };
+    let Ok(value) = header.to_str() else {
+        return Err(QpacktError::Forbidden);
+    };
+    let Some(parts) = value.split_once(' ') else { return Err(QpacktError::Forbidden) };
+    if is_token_valid(parts.1) {
+        Ok(HttpResponse::new(StatusCode::OK))
+    } else {
+        warn!("Invalid token ({}) from {:?}", parts.1, request.peer_addr());
+        Err(QpacktError::Forbidden)
+    }
 }

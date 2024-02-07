@@ -18,7 +18,7 @@
 */
 
 use crate::error::{QpacktError, Result};
-use crate::password::hash_password;
+use crate::panel::auth::password::hash_password;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use tokio::fs;
@@ -94,7 +94,6 @@ impl QpacktConfig {
         &self.run_directory
     }
 
-
     pub(crate) fn http_proxy_addr(&self) -> &str {
         &self.http_proxy
     }
@@ -121,6 +120,9 @@ impl QpacktConfig {
     }
     pub(crate) fn https_proxy_addr(&self) -> Option<&String> {
         self.https_proxy.as_ref()
+    }
+    pub(crate) fn password(&self) -> &str {
+        &self.password
     }
 }
 

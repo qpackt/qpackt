@@ -40,7 +40,6 @@ mod error;
 mod https_redirect;
 mod manager;
 mod panel;
-mod password;
 mod proxy;
 mod server;
 mod ssl;

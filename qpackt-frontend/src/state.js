@@ -28,8 +28,14 @@ import { reactive } from 'vue';
  *
  */
 const state = reactive({
-    /** Analytics page state
-     *
+    /**
+     * Token for logged in user.
+     */
+    authorization: {
+        token: '',
+    },
+    /**
+     * /analytics page state
      */
     analytics: {
         dateStart: {},
@@ -51,6 +57,15 @@ const state = reactive({
         list: [],
     }
 });
+
+export function getToken() {
+    return state.authorization.token
+}
+
+export function setToken(token) {
+    console.log("setting token " + token)
+    state.authorization.token = token
+}
 
 export function getAnalytics() {
     return state.analytics

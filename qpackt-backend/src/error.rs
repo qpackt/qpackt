@@ -17,6 +17,8 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use actix_web::http::StatusCode;
+use actix_web::ResponseError;
 use std::io;
 use thiserror::Error;
 
@@ -54,4 +56,16 @@ pub(crate) enum QpacktError {
 
     #[error("unable to serialize/deserialize")]
     SerializationError,
+
+    #[error("access forbidden")]
+    Forbidden,
+}
+
+impl ResponseError for QpacktError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            QpacktError::Forbidden => StatusCode::FORBIDDEN,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
 }

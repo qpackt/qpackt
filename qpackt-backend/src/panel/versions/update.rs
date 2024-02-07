@@ -18,10 +18,12 @@
 */
 use crate::dao::version::VersionName;
 use crate::dao::Dao;
+use crate::error::Result;
 use crate::manager::strategy::Strategy;
+use crate::panel::validate_permission;
 use crate::server::Versions;
 use actix_web::web::Data;
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use awc::http::StatusCode;
 use log::{debug, error, info};
 use serde::Deserialize;
@@ -37,21 +39,23 @@ pub(crate) struct VersionRequest {
 /// * Update according to request and save to database
 /// * Update handlers to be used for actual traffic split
 pub(crate) async fn update_versions(
-    web::Json(requests): web::Json<Vec<VersionRequest>>,
+    request: HttpRequest,
+    web::Json(version_requests): web::Json<Vec<VersionRequest>>,
     versions: Data<Versions>,
     dao: Data<Dao>,
-) -> HttpResponse {
-    debug!("Received versions update: {:?}", requests);
+) -> Result<impl Responder> {
+    validate_permission(&request)?;
+    debug!("Received versions update: {:?}", version_requests);
     let mut current = match dao.list_versions().await {
         Ok(current) => current,
         Err(e) => {
             error!("Unable to list site's versions: {}", e);
-            return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
+            return Err(e);
         }
     };
 
     for current_version in &mut current {
-        for new_version in &requests {
+        for new_version in &version_requests {
             if current_version.name == new_version.name {
                 current_version.strategy = new_version.strategy.clone();
                 break;
@@ -60,9 +64,9 @@ pub(crate) async fn update_versions(
     }
     if let Err(e) = dao.save_versions(&current).await {
         error!("Unable to save new site's versions: {}", e);
-        return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(e);
     }
     versions.update_strategies(&current).await;
     info!("Saved new site's versions: {:?}", current);
-    HttpResponse::new(StatusCode::OK)
+    Ok(HttpResponse::new(StatusCode::CREATED))
 }

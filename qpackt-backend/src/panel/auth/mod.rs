@@ -17,17 +17,5 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::error::Result;
-
-use scrypt::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Scrypt,
-};
-
-pub(crate) fn hash_password(password: String) -> Result<String> {
-    println!("Hashing password...");
-    let salt = SaltString::generate(&mut OsRng);
-    let hash = Scrypt.hash_password(password.as_bytes(), &salt)?.to_string();
-    println!("Done hashing");
-    Ok(hash)
-}
+pub(crate) mod password;
+pub(crate) mod token;

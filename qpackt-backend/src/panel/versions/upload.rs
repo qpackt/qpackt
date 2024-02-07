@@ -24,11 +24,12 @@ use crate::dao::Dao;
 use crate::error::QpacktError;
 use crate::error::Result;
 use crate::manager::strategy::Strategy;
+use crate::panel::validate_permission;
 use crate::server::Versions;
 use actix_multipart::{Field, Multipart};
-use actix_web::http::StatusCode;
 use actix_web::web::Data;
-use actix_web::HttpResponse;
+use actix_web::{HttpRequest, HttpResponse, Responder};
+use awc::http::StatusCode;
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use futures::{StreamExt, TryStreamExt};
 use log::{info, warn};
@@ -40,20 +41,32 @@ use std::time::SystemTime;
 
 /// Uploads new site's version as a zip file, unpacks it and registers in database.
 /// The site can be served after the upload.
-pub(crate) async fn upload_version(payload: Multipart, config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>) -> HttpResponse {
+pub(crate) async fn upload_version(
+    request: HttpRequest,
+    payload: Multipart,
+    config: Data<QpacktConfig>,
+    dao: Data<Dao>,
+    versions: Data<Versions>,
+) -> Result<impl Responder> {
+    validate_permission(&request)?;
     match serve_request(payload, config, dao, versions).await {
         Ok(name) => {
             info!("Registered new version: {}", name);
-            HttpResponse::Accepted().finish()
+            Ok(HttpResponse::new(StatusCode::CREATED))
         }
         Err(e) => {
             warn!("Unable to upload site: {}", e);
-            HttpResponse::new(StatusCode::BAD_REQUEST)
+            Err(e)
         }
     }
 }
 
-async fn serve_request(mut payload: Multipart, config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>) -> Result<VersionName> {
+async fn serve_request(
+    mut payload: Multipart,
+    config: Data<QpacktConfig>,
+    dao: Data<Dao>,
+    versions: Data<Versions>,
+) -> Result<VersionName> {
     let field = payload
         .try_next()
         .await

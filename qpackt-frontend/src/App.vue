@@ -18,19 +18,24 @@
 
 <template>
   <div class="card">
-    <TabMenu v-model:activeIndex="active" :model="items">
-      <template #item="{ label, item, props }">
-        <router-link v-if="item.route" v-slot="routerProps" :to="item.route" custom>
-          <a :href="routerProps.href" v-bind="props.action" @click="($event) => routerProps.navigate($event)" @keydown.enter.space="($event) => routerProps.navigate($event)">
-            <span v-bind="props.label">{{ label }}</span>
-          </a>
-        </router-link>
-      </template>
-    </TabMenu>
-    <div class="container">
-      <router-view />
+    <div v-if="getToken() !== ''">
+      <TabMenu v-model:activeIndex="active" :model="items">
+        <template #item="{ label, item, props }">
+          <router-link v-if="item.route" v-slot="routerProps" :to="item.route" custom>
+            <a :href="routerProps.href" v-bind="props.action" @click="($event) => routerProps.navigate($event)" @keydown.enter.space="($event) => routerProps.navigate($event)">
+              <span v-bind="props.label">{{ label }}</span>
+            </a>
+          </router-link>
+        </template>
+      </TabMenu>
+      <div class="container">
+        <button @click="setToken(0)">Logout</button>
+        <router-view />
+      </div>
     </div>
-
+    <div v-else>
+      <Login/>
+    </div>
   </div>
 </template>
 
@@ -38,8 +43,10 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
-import TabMenu from "primevue/tabmenu";
+import {getToken, setToken} from "./state.js";
 
+import TabMenu from "primevue/tabmenu";
+import Login from "./components/Login.vue";
 const router = useRouter();
 const route = useRoute();
 

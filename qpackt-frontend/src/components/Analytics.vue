@@ -20,8 +20,8 @@
 import {onMounted, reactive, ref} from "vue";
 import Calendar from 'primevue/calendar';
 import {getAnalytics, setAnalyticsResults, updateAnalyticsQuery} from "../state.js";
-import axios from "axios";
 import VersionStats from "./VersionStats.vue";
+import {http} from "../http.js";
 
 const dateStart = ref(initialPastDate())
 const dateEnd = ref(new Date())
@@ -48,7 +48,7 @@ async function loadAnalytics() {
 }
 
 async function fetchAnalytics(request) {
-  axios.post('/analytics', request).then(r => {
+  http.post('/analytics', request).then(r => {
     setAnalyticsResults({
       totalVisits: r.data.total_visit_count,
       stats: r.data.versions_stats,
@@ -61,7 +61,6 @@ onMounted(() => loadAnalytics())
 
 <template>
   <div>
-    Analytics template
     <Calendar v-model="dateStart" date-format="yy-mm-dd" showTime hourFormat="24" @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
     <Calendar v-model="dateEnd" date-format="yy-mm-dd" showTime hourFormat="24" @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
     <div>Total visits: {{analytics.totalVisits}}</div>

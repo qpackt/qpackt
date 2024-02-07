@@ -17,15 +17,13 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-import {addVersion, deleteVersions, listVersions} from "../state.js";
+  import {addVersion, deleteVersions, getToken, listVersions} from "../state.js";
   import {useToast} from "primevue/usetoast";
   import {onMounted, reactive} from "vue";
   import Toast from "primevue/toast";
   import FileUpload from "primevue/fileupload";
-
-
-  import axios from "axios";
   import Strategy from "./Strategy.vue";
+  import {http} from "../http.js";
   const toast = useToast();
   const versions = reactive(listVersions());
 
@@ -33,12 +31,12 @@ import {addVersion, deleteVersions, listVersions} from "../state.js";
     toast.add({severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000})
     deleteVersions()
     await loadVersions()
-  };
+  }
 
   async function loadVersions() {
     let versions = listVersions();
     if (versions.list.length === 0) {
-      axios.get('/list-versions').then(r => {
+      http.get('/list-versions').then(r => {
         for (const version of r.data) {
           addVersion(version.name, version.strategy)
         }
@@ -47,13 +45,18 @@ import {addVersion, deleteVersions, listVersions} from "../state.js";
   }
 
   async function deleteVersion(name) {
-    await axios.delete(`/delete-version/${name}`)
+    await http.delete(`/delete-version/${name}`)
     deleteVersions()
     await loadVersions()
   }
 
   async function updateVersions() {
-    await axios.post(`/update-versions`, versions.list)
+    await http.post(`/update-versions`, versions.list)
+  }
+
+  async function before(event) {
+    const token = getToken()
+    event.xhr.setRequestHeader("authorization", `Bearer ${token}`)
   }
 
   onMounted(() => loadVersions())
@@ -61,10 +64,10 @@ import {addVersion, deleteVersions, listVersions} from "../state.js";
 </script>
 
 <template>
-  Versions template
   <div class="card">
+
     <Toast />
-    <FileUpload name="demo[]" url="/upload-version" @upload="onAdvancedUpload($event)" :multiple="false" accept=".zip">
+    <FileUpload name="demo[]" url="/upload-version" @upload="onAdvancedUpload($event)" @before-send="before($event)" :multiple="false" accept=".zip">
       <template #empty>
         <p>Drag and drop files to here to upload.</p>
       </template>

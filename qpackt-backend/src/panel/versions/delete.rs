@@ -20,15 +20,23 @@
 use crate::config::QpacktConfig;
 use crate::constants::VERSIONS_SUBDIRECTORY;
 use crate::dao::Dao;
+use crate::error::{QpacktError, Result};
+use crate::panel::validate_permission;
 use crate::server::Versions;
 use actix_web::web::{Data, Path};
-use actix_web::HttpResponse;
-use awc::http::StatusCode;
+use actix_web::HttpRequest;
 use log::{debug, info, warn};
 use std::fs;
 
 /// Deletes site's version from file system and the database.
-pub(crate) async fn delete_version(name: Path<String>, dao: Data<Dao>, app: Data<QpacktConfig>, versions: Data<Versions>) -> HttpResponse {
+pub(crate) async fn delete_version(
+    request: HttpRequest,
+    name: Path<String>,
+    dao: Data<Dao>,
+    app: Data<QpacktConfig>,
+    versions: Data<Versions>,
+) -> Result<String> {
+    validate_permission(&request)?;
     debug!("Deleting version {}", name);
     match dao.delete_version(&name).await {
         Ok(path) => {
@@ -37,15 +45,15 @@ pub(crate) async fn delete_version(name: Path<String>, dao: Data<Dao>, app: Data
             let path = app.app_run_directory().join(VERSIONS_SUBDIRECTORY).join(path);
             if let Err(e) = fs::remove_dir_all(&path) {
                 warn!("Unable to delete path {:?} for version {}: {}", path, name, e);
-                HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).body(format!("Unable to delete: {}", e))
+                Err(QpacktError::InvalidConfig("Unable to delete path".to_string()))
             } else {
                 info!("Removed version {} and path {:?}", name, path);
-                HttpResponse::new(StatusCode::OK)
+                Ok("OK".to_string())
             }
         }
         Err(e) => {
             warn!("Unable to delete version {}: {}", name, e);
-            HttpResponse::build(StatusCode::INTERNAL_SERVER_ERROR).body(format!("Unable to delete: {}", e))
+            Err(e)
         }
     }
 }

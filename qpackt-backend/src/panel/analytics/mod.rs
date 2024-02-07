@@ -20,9 +20,10 @@
 use crate::dao::version::VersionName;
 use crate::dao::visits::Visit;
 use crate::dao::Dao;
-use crate::panel::json_response;
-use actix_web::web::Data;
-use actix_web::{web, HttpRequest, HttpResponse};
+use crate::error::Result;
+use crate::panel::validate_permission;
+use actix_web::web::{Data, Json};
+use actix_web::{HttpRequest, Responder};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -52,12 +53,13 @@ struct VersionStats {
     visit_count: usize,
 }
 
-pub(crate) async fn get_analytics(http: HttpRequest, r: web::Json<AnalyticsRequest>, dao: Data<Dao>) -> HttpResponse {
-    let from = r.from_time.timestamp() as u64;
-    let to = r.to_time.timestamp() as u64;
+pub(crate) async fn get_analytics(http_request: HttpRequest, request: Json<AnalyticsRequest>, dao: Data<Dao>) -> Result<impl Responder> {
+    validate_permission(&http_request)?;
+    let from = request.from_time.timestamp() as u64;
+    let to = request.to_time.timestamp() as u64;
     let visits = dao.get_visits(from, to).await.unwrap();
     let response = convert_to_response(visits);
-    json_response(&http, response)
+    Ok(Json(response))
 }
 
 fn convert_to_response(visits: Vec<Visit>) -> AnalyticsResponse {

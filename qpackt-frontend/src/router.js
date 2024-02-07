@@ -17,33 +17,80 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import {getToken} from "./state.js";
+
 const Versions = () => import('./components/Versions.vue')
 const Analytics = () => import("./components/Analytics.vue")
 
 import { createWebHistory, createRouter } from "vue-router";
+import * as state from "./state.js";
+import Login from "./components/Login.vue";
+import {http} from "./http.js";
 
 const routes = [
     {
         path: "/",
         name: "root",
-        component: Versions
-    },
-    {
-        path: "/versions",
-        name: "versions",
-        component: Versions
+        component: Versions,
+        meta: {
+            requiresAuth: true,
+        }
     },
     {
         path: "/analytics",
         name: "analytics",
-        component: Analytics
+        component: Analytics,
+        meta: {
+            requiresAuth: true,
+        }
     },
-
+    {
+        path: "/login",
+        name: "login",
+        component: Login,
+        meta: {
+            requiresAuth: false,
+        }
+    },
+    {
+        path: "/versions",
+        name: "versions",
+        component: Versions,
+        meta: {
+            requiresAuth: true,
+        }
+    },
 ]
 
 const router = createRouter({
     routes,
     history: createWebHistory()
 });
+
+router.beforeEach((to, from, next) => {
+    let has_auth = state.getToken !== 0;
+    if (to.meta.requiresAuth) {
+        if (has_auth) {
+            next();
+        } else {
+            http.try_login().then(response => {
+                if (response) {
+                    next();
+                } else {
+                    next({name: 'login', query: {next: to.path}})
+                }
+            }).catch(() => {
+                next({name: 'login', query: {next: to.path}})
+            });
+        }
+    } else {
+        if (!has_auth) {
+            http.try_login().finally( () => next())
+        } else {
+            next();
+        }
+
+    }
+})
 
 export default router;
