@@ -24,38 +24,12 @@
   import {ref} from "vue";
   import {http} from "../http.js";
 
-  function loggedIn(r) {
-    // this.loading = false;
-    // let role = r.data.role;
-    // let token = r.data.token.value;
-    // let user_id = r.data.user_id;
-    // this.$store.commit('save_token', token);
-    // this.$store.commit('save_role', role);
-    // this.$store.commit('save_user_id', user_id);
-    // if (this.remember_password) {
-    //   localStorage.setItem('login', this.login.login.trim());
-    //   localStorage.setItem('password', this.login.password.trim());
-    // }
-    // if (role === 'Admin') {
-    //   this.$router.push({name:'admin'})
-    // } else {
-    //   if (this.$route.query.next !== undefined) {
-    //     this.$router.push({path: this.$route.query.next})
-    //   } else {
-    //     this.$router.push({name:'jobs'})
-    //   }
-    // }
-  }
-
   function haveToken(token) {
     setToken(token.token);
   }
 
-  function loginError() {
-    console.log('error')
-  }
   async function fetchToken() {
-    http.post('/token', {password: password.value}).then(r => haveToken(r.data)).catch(r => loginError())
+    http.post('/token', {password: password.value}).then(r => haveToken(r.data))
   }
 
   const password = ref('');

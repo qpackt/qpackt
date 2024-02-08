@@ -17,7 +17,6 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import './style.css'
 import "primevue/resources/themes/md-light-indigo/theme.css";
 
 import { createApp } from 'vue'

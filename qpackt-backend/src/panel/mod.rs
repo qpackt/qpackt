@@ -58,8 +58,7 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
                 .service(web::resource("/list-versions").route(web::get().to(list_versions)))
                 .service(web::resource("/analytics").route(web::post().to(get_analytics)))
                 .service(web::resource("/delete-version/{name}").route(web::delete().to(delete_version)))
-                .service(web::resource("/token").route(web::post().to(get_token)))
-                .service(web::resource("/token").route(web::delete().to(invalidate_token)))
+                .service(web::resource("/token").delete(invalidate_token).post(get_token))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", "../qpackt-frontend/dist").index_file("index.html"))
         });

@@ -17,76 +17,23 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <template>
-  <div class="card">
-    <div v-if="getToken() !== ''">
-      <TabMenu v-model:activeIndex="active" :model="items">
-        <template #item="{ label, item, props }">
-          <router-link v-if="item.route" v-slot="routerProps" :to="item.route" custom>
-            <a :href="routerProps.href" v-bind="props.action" @click="($event) => routerProps.navigate($event)" @keydown.enter.space="($event) => routerProps.navigate($event)">
-              <span v-bind="props.label">{{ label }}</span>
-            </a>
-          </router-link>
-        </template>
-      </TabMenu>
-      <div class="container">
-        <button @click="setToken(0)">Logout</button>
-        <router-view />
-      </div>
+  <div v-if="getToken() !== ''">
+    <div>
+      <Logout/>
+      <TopMenu/>
     </div>
-    <div v-else>
-      <Login/>
+    <div class="container">
+      <router-view />
     </div>
+  </div>
+  <div v-else>
+    <Login/>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
-
-import {getToken, setToken} from "./state.js";
-
-import TabMenu from "primevue/tabmenu";
+import { getToken } from "./state.js";
 import Login from "./components/Login.vue";
-const router = useRouter();
-const route = useRoute();
-
-const active = ref(0);
-const items = ref([
-  {
-    label: 'Versions',
-    route: '/versions'
-  },
-  {
-    label: 'Analytics',
-    route: '/analytics'
-  },
-]);
-
-onMounted(() => {
-  active.value = items.value.findIndex((item) => route.path === router.resolve(item.route).path);
-})
-
-watch(
-    route,
-    () => {
-      active.value = items.value.findIndex((item) => route.path === router.resolve(item.route).path);
-    },
-    { immediate: true }
-);
+import TopMenu from "./components/TopMenu.vue";
+import Logout from "./components/Logout.vue";
 </script>
-
-
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>

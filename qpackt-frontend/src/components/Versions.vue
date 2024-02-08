@@ -24,6 +24,7 @@
   import FileUpload from "primevue/fileupload";
   import Strategy from "./Strategy.vue";
   import {http} from "../http.js";
+  import Button from "primevue/button";
   const toast = useToast();
   const versions = reactive(listVersions());
 
