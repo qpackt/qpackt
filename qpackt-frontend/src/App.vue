@@ -27,7 +27,11 @@
     </div>
   </div>
   <div v-else>
-    <Login/>
+    <div class="container">
+      <div class="content">
+        <Login/>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -37,3 +41,21 @@ import Login from "./components/Login.vue";
 import TopMenu from "./components/TopMenu.vue";
 import Logout from "./components/Logout.vue";
 </script>
+
+<style scoped>
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.container {
+  text-align: center;
+  padding: 10px;
+}
+
+.content {
+}
+</style>

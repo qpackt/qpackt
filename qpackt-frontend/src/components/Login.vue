@@ -18,29 +18,33 @@
 
 
 <script setup>
-  import {setToken} from "../state.js";
-  import Button from 'primevue/button';
-  import Password from 'primevue/password';
-  import {ref} from "vue";
-  import {http} from "../http.js";
+import {setToken} from "../state.js";
+import Button from 'primevue/button';
+import Password from 'primevue/password';
+import {ref} from "vue";
+import {http} from "../http.js";
 
-  function haveToken(token) {
-    setToken(token.token);
-  }
+function haveToken(token) {
+  setToken(token.token);
+}
 
-  async function fetchToken() {
-    http.post('/token', {password: password.value}).then(r => haveToken(r.data))
-  }
+async function fetchToken() {
+  http.post('/token', {password: password.value}).then(r => haveToken(r.data))
+}
 
-  const password = ref('');
+const password = ref('');
 </script>
 
 <template>
   <div>
-    <div class="card flex justify-content-center">
+    Qpackt Login
+    <div style="padding: 10px">
       <Password v-model="password" :feedback="false"/>
     </div>
-    <Button label="Login" @click="fetchToken"/>
+    <div>
+      <Button label="Login" @click="fetchToken"/>
+    </div>
+
   </div>
 </template>
 
