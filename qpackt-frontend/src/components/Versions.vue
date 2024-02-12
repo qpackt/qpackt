@@ -22,6 +22,8 @@
   import {onMounted, reactive} from "vue";
   import Toast from "primevue/toast";
   import FileUpload from "primevue/fileupload";
+  import Card from 'primevue/card';
+  import Panel from 'primevue/panel';
   import Strategy from "./Strategy.vue";
   import {http} from "../http.js";
   import Button from "primevue/button";
@@ -65,24 +67,31 @@
 </script>
 
 <template>
-  <div class="card">
+  <Card>
+    <template #title>Installed versions</template>
+    <template #content>
+      <p v-for="version in versions.list" class="m-0">
+        <Panel :header="version.name">
+          <Strategy :strategy="version.strategy" :name="version.name"/>
+          <Button @click="deleteVersion(version.name)">Delete</Button>
+        </Panel>
+      </p>
+      <Button @click="updateVersions" :disabled="!versions.changed">Update</Button>
+    </template>
 
-    <Toast />
-    <FileUpload name="demo[]" url="/upload-version" @upload="onAdvancedUpload($event)" @before-send="before($event)" :multiple="false" accept=".zip">
-      <template #empty>
-        <p>Drag and drop files to here to upload.</p>
-      </template>
-    </FileUpload>
-  </div>
-  <div>
-    <div v-for="version in versions.list">
-      Name: {{version.name}}
-      <Strategy :strategy="version.strategy" :name="version.name"/>
-      <Button @click="deleteVersion(version.name)">Delete</Button>
-    </div>
-    <Button @click="updateVersions" :disabled="!versions.changed">Update</Button>
-  </div>
-
+  </Card>
+  <div style="padding: 5px"></div>
+  <Card>
+    <template #title>Upload a new version</template>
+    <template #content>
+      <Toast />
+      <FileUpload name="upload[]" url="/upload-version" @upload="onAdvancedUpload($event)" @before-send="before($event)" :multiple="false" accept=".zip">
+        <template #empty>
+          <p>Drag and drop files to here to upload a new web version</p>
+        </template>
+      </FileUpload>
+    </template>
+  </Card>
 </template>
 
 <style scoped>

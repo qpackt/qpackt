@@ -51,10 +51,6 @@ import {updateVersion} from "../state.js";
 </script>
 
 <template>
-  <div>
-
-    <div class="flex flex-wrap gap-3">
-
         <RadioButton v-model="selection" inputId="Weight" name="selection" value="Weight" @change="emitCurrent"/>
         <label for="selection" class="ml-2">Weight</label>
         <InputNumber v-model="weight" mode="decimal" :min="0" :max="100" :disabled="selection !== 'Weight'" @focusout="emitCurrent"/>
@@ -63,8 +59,7 @@ import {updateVersion} from "../state.js";
         <label for="selection" class="ml-2">UrlParam</label>
         <InputText type="text" v-model="urlParam" :disabled="selection !== 'UrlParam'" @focusout="emitCurrent"/>
 
-    </div>
-  </div>
+
 </template>
 
 <style scoped>

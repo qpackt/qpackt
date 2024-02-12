@@ -18,25 +18,23 @@
 
 <template>
   <div v-if="getToken() !== ''">
-    <div>
+    <div class="right">
       <Logout/>
-      <TopMenu/>
     </div>
     <div class="container">
-      <router-view />
+      <TopMenu/>
     </div>
+    <router-view/>
   </div>
   <div v-else>
     <div class="container">
-      <div class="content">
-        <Login/>
-      </div>
+      <Login/>
     </div>
   </div>
 </template>
 
 <script setup>
-import { getToken } from "./state.js";
+import {getToken} from "./state.js";
 import Login from "./components/Login.vue";
 import TopMenu from "./components/TopMenu.vue";
 import Logout from "./components/Logout.vue";
@@ -51,11 +49,14 @@ body {
   justify-content: center;
   align-items: center;
 }
+
 .container {
   text-align: center;
   padding: 10px;
 }
 
-.content {
+.right {
+  text-align: right;
 }
+
 </style>
