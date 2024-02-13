@@ -17,52 +17,48 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-  import {addVersion, deleteVersions, getToken, listVersions} from "../state.js";
-  import {useToast} from "primevue/usetoast";
-  import {onMounted, reactive} from "vue";
-  import Toast from "primevue/toast";
-  import FileUpload from "primevue/fileupload";
-  import Card from 'primevue/card';
-  import Panel from 'primevue/panel';
-  import Strategy from "./Strategy.vue";
-  import {http} from "../http.js";
-  import Button from "primevue/button";
-  const toast = useToast();
-  const versions = reactive(listVersions());
+import {addVersion, deleteVersions, getToken, listVersions} from "../state.js";
+import {useToast} from "primevue/usetoast";
+import {onMounted, reactive} from "vue";
+import Toast from "primevue/toast";
+import FileUpload from "primevue/fileupload";
+import Card from 'primevue/card';
+import Panel from 'primevue/panel';
+import Strategy from "./Strategy.vue";
+import {http} from "../http.js";
+import Button from "primevue/button";
 
-  const onAdvancedUpload = async (e) => {
-    toast.add({severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000})
-    deleteVersions()
-    await loadVersions()
+const toast = useToast();
+const versions = reactive(listVersions());
+
+const onAdvancedUpload = async (e) => {
+  toast.add({severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000})
+  deleteVersions()
+  await loadVersions()
+}
+
+async function loadVersions() {
+  let versions = listVersions();
+  if (versions.list.length === 0) {
+    http.get('/list-versions').then(r => {
+      for (const version of r.data) {
+        addVersion(version.name, version.strategy)
+      }
+    })
   }
+}
 
-  async function loadVersions() {
-    let versions = listVersions();
-    if (versions.list.length === 0) {
-      http.get('/list-versions').then(r => {
-        for (const version of r.data) {
-          addVersion(version.name, version.strategy)
-        }
-      })
-    }
-  }
 
-  async function deleteVersion(name) {
-    await http.delete(`/delete-version/${name}`)
-    deleteVersions()
-    await loadVersions()
-  }
+async function updateVersions() {
+  await http.post(`/update-versions`, versions.list)
+}
 
-  async function updateVersions() {
-    await http.post(`/update-versions`, versions.list)
-  }
+async function before(event) {
+  const token = getToken()
+  event.xhr.setRequestHeader("authorization", `Bearer ${token}`)
+}
 
-  async function before(event) {
-    const token = getToken()
-    event.xhr.setRequestHeader("authorization", `Bearer ${token}`)
-  }
-
-  onMounted(() => loadVersions())
+onMounted(() => loadVersions())
 
 </script>
 
@@ -73,7 +69,6 @@
       <p v-for="version in versions.list" class="m-0">
         <Panel :header="version.name">
           <Strategy :strategy="version.strategy" :name="version.name"/>
-          <Button @click="deleteVersion(version.name)">Delete</Button>
         </Panel>
       </p>
       <Button @click="updateVersions" :disabled="!versions.changed">Update</Button>
@@ -84,8 +79,9 @@
   <Card>
     <template #title>Upload a new version</template>
     <template #content>
-      <Toast />
-      <FileUpload name="upload[]" url="/upload-version" @upload="onAdvancedUpload($event)" @before-send="before($event)" :multiple="false" accept=".zip">
+      <Toast/>
+      <FileUpload name="upload[]" url="/upload-version" @upload="onAdvancedUpload($event)" @before-send="before($event)"
+                  :multiple="false" accept=".zip">
         <template #empty>
           <p>Drag and drop files to here to upload a new web version</p>
         </template>

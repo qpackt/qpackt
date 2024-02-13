@@ -102,3 +102,16 @@ export function deleteVersions() {
     state.versions.changed = false
     state.versions.list.length = 0
 }
+
+export function deleteVersion(name) {
+    state.versions.changed = false
+    let index = -1;
+    for (let i = 0; i <  state.versions.list.length; i++) {
+        if (state.versions.list[i].name === name) {
+            index = i;
+        }
+    }
+    if (index >= 0) {
+        state.versions.list.splice(index)
+    }
+}

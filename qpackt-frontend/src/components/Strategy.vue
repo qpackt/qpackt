@@ -21,7 +21,11 @@ import {defineProps, onMounted, ref} from 'vue';
 import RadioButton from 'primevue/radiobutton';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import {updateVersion} from "../state.js";
+import {deleteVersion, updateVersion} from "../state.js";
+import InputGroup from 'primevue/inputgroup';
+import Button from "primevue/button";
+import InputGroupAddon from 'primevue/inputgroupaddon';
+import {http} from "../http.js";
 
 
   const props = defineProps(['strategy', 'name']);
@@ -38,6 +42,11 @@ import {updateVersion} from "../state.js";
     }
   })
 
+  async function callDeleteVersion() {
+      await http.delete(`/delete-version/${props.name}`)
+      await deleteVersion(props.name)
+  }
+
   function emitCurrent() {
     let value;
     if (selection.value === 'UrlParam') {
@@ -51,15 +60,21 @@ import {updateVersion} from "../state.js";
 </script>
 
 <template>
-        <RadioButton v-model="selection" inputId="Weight" name="selection" value="Weight" @change="emitCurrent"/>
-        <label for="selection" class="ml-2">Weight</label>
-        <InputNumber v-model="weight" mode="decimal" :min="0" :max="100" :disabled="selection !== 'Weight'" @focusout="emitCurrent"/>
-
-        <RadioButton v-model="selection" inputId="UrlParam" name="selection" value="UrlParam" @change="emitCurrent"/>
-        <label for="selection" class="ml-2">UrlParam</label>
-        <InputText type="text" v-model="urlParam" :disabled="selection !== 'UrlParam'" @focusout="emitCurrent"/>
-
-
+  <InputGroup>
+    <InputGroupAddon>
+      <RadioButton v-model="selection" inputId="Weight" name="selection" value="Weight" @change="emitCurrent"/>
+      <label for="selection" class="ml-2">Weight</label>
+      <InputNumber v-model="weight" mode="decimal" :min="0" :max="100" :disabled="selection !== 'Weight'" @focusout="emitCurrent"/>
+    </InputGroupAddon>
+    <InputGroupAddon>
+      <RadioButton v-model="selection" inputId="UrlParam" name="selection" value="UrlParam" @change="emitCurrent"/>
+      <label for="selection" class="ml-2">UrlParam</label>
+      <InputText type="text" v-model="urlParam" :disabled="selection !== 'UrlParam'" @focusout="emitCurrent"/>
+    </InputGroupAddon>
+    <InputGroupAddon>
+      <Button @click="callDeleteVersion" severity="danger">Delete </Button>
+    </InputGroupAddon>
+  </InputGroup>
 </template>
 
 <style scoped>
