@@ -44,7 +44,7 @@ import {http} from "../http.js";
 
   async function callDeleteVersion() {
       await http.delete(`/delete-version/${props.name}`)
-      await deleteVersion(props.name)
+      deleteVersion(props.name)
   }
 
   function emitCurrent() {
@@ -63,16 +63,16 @@ import {http} from "../http.js";
   <InputGroup>
     <InputGroupAddon>
       <RadioButton v-model="selection" inputId="Weight" name="selection" value="Weight" @change="emitCurrent"/>
-      <label for="selection" class="ml-2">Weight</label>
+      <label for="selection" class="ml-2">&nbsp;Weight&nbsp;</label>
       <InputNumber v-model="weight" mode="decimal" :min="0" :max="100" :disabled="selection !== 'Weight'" @focusout="emitCurrent"/>
     </InputGroupAddon>
     <InputGroupAddon>
       <RadioButton v-model="selection" inputId="UrlParam" name="selection" value="UrlParam" @change="emitCurrent"/>
-      <label for="selection" class="ml-2">UrlParam</label>
+      <label for="selection" class="ml-2">&nbsp;UrlParam&nbsp;</label>
       <InputText type="text" v-model="urlParam" :disabled="selection !== 'UrlParam'" @focusout="emitCurrent"/>
     </InputGroupAddon>
     <InputGroupAddon>
-      <Button @click="callDeleteVersion" severity="danger">Delete </Button>
+      <Button @click="callDeleteVersion" severity="danger">Delete</Button>
     </InputGroupAddon>
   </InputGroup>
 </template>

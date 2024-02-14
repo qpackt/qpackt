@@ -66,7 +66,7 @@ export function setToken(token) {
     state.authorization.token = token
 }
 
-export function getAnalytics() {
+export function state_getAnalytics() {
     return state.analytics
 }
 
@@ -112,6 +112,6 @@ export function deleteVersion(name) {
         }
     }
     if (index >= 0) {
-        state.versions.list.splice(index)
+        state.versions.list.splice(index, 1)
     }
 }

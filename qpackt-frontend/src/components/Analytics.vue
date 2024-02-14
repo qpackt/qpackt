@@ -19,14 +19,18 @@
 <script setup>
 import {onMounted, reactive, ref} from "vue";
 import Calendar from 'primevue/calendar';
-import {getAnalytics, setAnalyticsResults, updateAnalyticsQuery} from "../state.js";
-import VersionStats from "./VersionStats.vue";
+import InputGroup from 'primevue/inputgroup';
+import InputGroupAddon from 'primevue/inputgroupaddon';
+import Button from "primevue/button";
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Panel from 'primevue/panel';
+import {state_getAnalytics, setAnalyticsResults, updateAnalyticsQuery} from "../state.js";
 import {http} from "../http.js";
 
 const dateStart = ref(initialPastDate())
 const dateEnd = ref(new Date())
-
-const analytics = reactive(getAnalytics())
+const analytics = reactive(state_getAnalytics())
 
 function initialPastDate() {
   let date = new Date()
@@ -39,15 +43,15 @@ async function loadAnalytics() {
     dateStart.value = analytics.dateStart
     dateEnd.value = analytics.dateEnd
   } else {
-    let request = {
-      from_time: dateStart.value.toJSON(),
-      to_time: dateEnd.value.toJSON()
-    }
-    await fetchAnalytics(request)
+    await fetchAnalytics()
   }
 }
 
-async function fetchAnalytics(request) {
+async function fetchAnalytics() {
+  let request = {
+    from_time: dateStart.value.toJSON(),
+    to_time: dateEnd.value.toJSON()
+  }
   http.post('/analytics', request).then(r => {
     setAnalyticsResults({
       totalVisits: r.data.total_visit_count,
@@ -60,16 +64,32 @@ onMounted(() => loadAnalytics())
 </script>
 
 <template>
-  <div>
-    <Calendar v-model="dateStart" date-format="yy-mm-dd" showTime hourFormat="24" @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
-    <Calendar v-model="dateEnd" date-format="yy-mm-dd" showTime hourFormat="24" @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
-    <div>Total visits: {{analytics.totalVisits}}</div>
-    <div v-for="stat in analytics.stats">
-      <VersionStats :stats="stat"/>
-    </div>
-  </div>
+  <Panel>
+    <InputGroup>
+      <InputGroupAddon>
+        <label for="selection" class="ml-2">From&nbsp;</label>
+        <Calendar v-model="dateStart" date-format="yy-mm-dd" showTime hourFormat="24"
+                  @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
+      </InputGroupAddon>
+      <InputGroupAddon>
+        <label for="selection" class="ml-2">&nbsp;to&nbsp;</label>
+        <Calendar v-model="dateEnd" date-format="yy-mm-dd" showTime hourFormat="24"
+                  @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
+      </InputGroupAddon>
+      <InputGroupAddon>
+        <Button @click="fetchAnalytics">Get</Button>
+      </InputGroupAddon>
+    </InputGroup>
+  </Panel>
+  <div style="padding: 10px"></div>
+  <Panel>
+    Total visits: {{analytics.totalVisits}}
+    <DataTable :value="analytics.stats" table-style="min-width: 50rem" showGridlines stripedRows>
+      <Column field="name" header="Name"></Column>
+      <Column field="visit_count" header="Visit count"></Column>
+      <Column field="average_requests" header="Av. requests"></Column>
+      <Column field="average_duration" header="Av. duration (sec)"></Column>
+      <Column field="bounce_rate" header="Bounce rate"></Column>
+    </DataTable>
+  </Panel>
 </template>
-
-<style scoped>
-
-</style>
