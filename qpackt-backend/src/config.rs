@@ -105,13 +105,13 @@ impl QpacktConfig {
         let https_proxy = read_stdin("Ip/port for HTTPS traffic (leave empty for no HTTPS)")?;
         // TODO read twice, disable echoing.
         let password = read_stdin("Administrator's password")?;
-        let run_directory = read_stdin("Run directory (default /var/run/qpackt)")?;
+        let run_directory = read_stdin("Run directory (default /usr/share/qpackt/run)")?;
         Ok(QpacktConfig {
             domain,
             http_proxy: if_empty_then(http_proxy, "0.0.0.0:8080"),
             https_proxy: if https_proxy.is_empty() { None } else { Some(https_proxy) },
             password: hash_password(password)?,
-            run_directory: if_empty_then(run_directory, "/var/run/qpackt").into(),
+            run_directory: if_empty_then(run_directory, "/usr/share/qpackt/run").into(),
         })
     }
 
