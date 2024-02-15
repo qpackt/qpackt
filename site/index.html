@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qpackt :: Web Deployment and Monitoring</title>
+    <link href="tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+<nav class="bg-gray-800 py-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <div>
+            <a href="#" class="text-white text-lg font-bold">Qpackt</a>
+        </div>
+        <div class="hidden md:block" style="margin: 10px">
+            <ul class="flex space-x-4">
+                <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
+                <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
+                <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
+                <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+            </ul>
+        </div>
+        <div class="md:hidden">
+            <button id="menu-toggle" class="text-white focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div id="menu" class="hidden md:hidden bg-gray-800 py-4">
+    <ul class="flex flex-col space-y-2">
+        <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
+        <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
+        <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
+        <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+    </ul>
+</div>
+
+<script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const menu = document.getElementById('menu');
+
+    menuToggle.addEventListener('click', function () {
+        menu.classList.toggle('hidden');
+    });
+</script>
+<div class="max-w-2xl mx-auto">
+    <div style="margin: 30px"></div>
+    <h2 class="text-2xl font-bold mb-4">Qpackt - Web Deployment and Monitoring</h2>
+    Qpackt is a web server designed to make your life easier:
+    <div class="mb-6">
+        <p class="font-bold">1. Serve Multiple Versions of Your Website:</p>
+        <ul class="list-disc pl-6">
+            <li>Visitors are assigned a version on the first request.</li>
+            <li>Consecutive requests are served from the selected version.</li>
+            <li>This enables:</li>
+            <ul class="list-disc pl-6">
+                <li>a) A/B testing</li>
+                <li>b) Loading multiple versions based on specified URL parameters</li>
+                <li>c) Deploying new versions while preserving old sessions</li>
+            </ul>
+        </ul>
+    </div>
+
+    <div class="mb-6">
+        <p class="font-bold">2. Basic, GDPR-Compliant Analytics:</p>
+        <p>Includes metrics like bounce rate and visit count, collected without cookies.</p>
+    </div>
+
+    <div class="mb-6">
+        <p class="font-bold">3. Auto-Fetch SSL Certificates:</p>
+        <p>Automatically fetch (and renew) SSL certificates from LetsEncrypt.</p>
+    </div>
+
+    <div class="mb-6">
+        <p class="font-bold">4. GUI Configuration:</p>
+        <p>Provides a graphical user interface for ease of use.</p>
+    </div>
+
+    <div class="mb-6">
+        <p class="font-bold">5. Open Source and Free:</p>
+        <p>Fully open source and free to use. <a href="https://github.com/qpackt/qpackt" target="_blank" class="text-blue-500">Source code</a>.</p>
+    </div>
+
+    <p>Qpackt is not yet production ready (see <a href="roadmap.html" class="text-blue-500">roadmap</a>) but is able to serve itself (if you can read this).</p>
+    <p>If you're interested about future development, follow me on X (<a href="https://twitter.com/QPackt" class="text-blue-500">https://twitter.com/QPackt</a>)</p>
+    <p>For installation instructions follow <a href="https://github.com/qpackt/qpackt/blob/main/Installation.md" class="text-blue-500">the source</a>.</p>
+
+</div>
+</body>
+
+</html>
