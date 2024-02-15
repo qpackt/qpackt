@@ -2352,16 +2352,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-http"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-multipart",
- "actix-web",
- "futures-util",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
