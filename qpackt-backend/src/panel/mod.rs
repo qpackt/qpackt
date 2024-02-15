@@ -36,6 +36,7 @@ use auth::token::get_token;
 use awc::http::StatusCode;
 use log::warn;
 use rustls::ServerConfig;
+use std::env;
 
 mod analytics;
 pub(crate) mod auth;
@@ -48,6 +49,7 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
     tokio::spawn({
         let app_config = config.clone();
         let server = HttpServer::new(move || {
+            let html_path = env::var("QPACKT_HTML_DIR").unwrap_or("/usr/share/qpackt/html".into());
             App::new()
                 .wrap(CheckHttpsRedirect {})
                 .app_data(app_config.clone())
@@ -60,7 +62,7 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
                 .service(web::resource("/delete-version/{name}").route(web::delete().to(delete_version)))
                 .service(web::resource("/token").delete(invalidate_token).post(get_token))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
-                .service(Files::new("/", "../qpackt-frontend/dist").index_file("index.html"))
+                .service(Files::new("/", html_path).index_file("index.html"))
         });
         match tls_config {
             None => server.bind(PANEL_HTTP).unwrap().run(),
