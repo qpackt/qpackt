@@ -6,7 +6,7 @@ Qpackt is a web server that makes life a bit easier:
 * Auto fetch and renew SSL certificate
 * GUI configuration
 
-Qpackt is not yet production ready (see roadmap) but is able to serve itself at https://qpackt.com
+Qpackt is not yet production ready but is able to serve itself at https://qpackt.com/?source=gh
 
 If you're interested about future development, follow me on X (https://twitter.com/QPackt) 
 
