@@ -44,6 +44,8 @@ mod proxy;
 mod server;
 mod ssl;
 
+mod tests;
+
 use crate::analytics::writer::RequestWriter;
 use crate::config::QpacktConfig;
 use crate::dao::version::Version;
@@ -59,7 +61,7 @@ use crate::ssl::{get_certificate, FORCE_HTTPS_REDIRECT};
 use actix_web::web::Data;
 use log::info;
 use rustls::ServerConfig;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -73,15 +75,19 @@ async fn main() {
     env::set_var("RUST_LOG", "debug");
     env_logger::init();
     let args: Vec<String> = env::args().collect();
+    run_with_args(args).await;
+}
+
+pub(crate) async fn run_with_args(args: Vec<String>) {
     if let Some(config_path) = args.get(1) {
-        let handler = run_app(config_path).await;
+        let handler = run_app(&PathBuf::from(config_path)).await;
         wait(handler).await;
     } else {
         QpacktConfig::create().await;
     }
 }
 
-pub(crate) async fn run_app(config_path: &str) -> JoinHandle<()> {
+pub(crate) async fn run_app(config_path: &PathBuf) -> JoinHandle<()> {
     let config = QpacktConfig::read(config_path).await.unwrap();
     ensure_app_dir_exists(config.app_run_directory()).unwrap();
     let dao = Dao::init(config.app_run_directory()).await.unwrap();

@@ -37,9 +37,9 @@ pub(crate) struct TokenRequest {
     password: String,
 }
 
-#[derive(Serialize)]
-struct TokenResponse {
-    token: String,
+#[derive(Deserialize, Serialize)]
+pub(crate) struct TokenResponse {
+    pub(crate) token: String, // TODO fix pub
 }
 
 /// Gets token if supplied correct password.

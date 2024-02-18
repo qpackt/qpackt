@@ -42,7 +42,7 @@ mod analytics;
 pub(crate) mod auth;
 mod versions;
 
-const PANEL_HTTP: &str = "0.0.0.0:9080";
+const PANEL_HTTP: &str = "0.0.0.0:9080"; // TODO turn port into constant (for tests)
 const PANEL_HTTPS: &str = "0.0.0.0:9443";
 
 pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>, tls_config: Option<ServerConfig>) {
