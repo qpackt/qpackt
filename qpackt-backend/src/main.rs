@@ -66,6 +66,7 @@ use std::time::Duration;
 use std::{env, fs};
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
+use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
@@ -73,21 +74,25 @@ async fn main() {
     env_logger::init();
     let args: Vec<String> = env::args().collect();
     if let Some(config_path) = args.get(1) {
-        let config = QpacktConfig::read(config_path).await.unwrap();
-        ensure_app_dir_exists(config.app_run_directory()).unwrap();
-        let dao = Dao::init(config.app_run_directory()).await.unwrap();
-        let writer = RequestWriter::new(dao.clone());
-        analytics::hash::init(dao.clone()).await.unwrap();
-        let versions = dao.list_versions().await.unwrap();
-        start_http(config, dao, versions, writer).await;
-        wait().await;
+        let handler = run_app(config_path).await;
+        wait(handler).await;
     } else {
         QpacktConfig::create().await;
     }
 }
 
+pub(crate) async fn run_app(config_path: &str) -> JoinHandle<()> {
+    let config = QpacktConfig::read(config_path).await.unwrap();
+    ensure_app_dir_exists(config.app_run_directory()).unwrap();
+    let dao = Dao::init(config.app_run_directory()).await.unwrap();
+    let writer = RequestWriter::new(dao.clone());
+    analytics::hash::init(dao.clone()).await.unwrap();
+    let versions = dao.list_versions().await.unwrap();
+    tokio::spawn(start_http(config, dao, versions, writer))
+}
+
 /// Waits for signal and exits
-async fn wait() -> ! {
+async fn wait(handler: JoinHandle<()>) -> ! {
     let mut signal_interrupt = signal(SignalKind::interrupt()).unwrap();
     let mut signal_terminate = signal(SignalKind::terminate()).unwrap();
 
@@ -101,6 +106,7 @@ async fn wait() -> ! {
             tokio::time::sleep(Duration::from_millis(100)).await;
         },
     }
+    handler.abort();
     std::process::exit(0);
 }
 
