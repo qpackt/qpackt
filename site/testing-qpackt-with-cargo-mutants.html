@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qpackt :: Ramblings About Software Engineering</title>
+    <link href="tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+<nav class="bg-gray-800 py-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <div>
+            <a href="#" class="text-white text-lg font-bold">Qpackt</a>
+        </div>
+        <div class="hidden md:block" style="margin: 10px">
+            <ul class="flex space-x-4">
+                <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
+                <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
+                <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
+                <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
+                <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+            </ul>
+        </div>
+        <div class="md:hidden">
+            <button id="menu-toggle" class="text-white focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div id="menu" class="hidden md:hidden bg-gray-800 py-4">
+    <ul class="flex flex-col space-y-2">
+        <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
+        <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
+        <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
+        <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
+        <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+    </ul>
+</div>
+
+<script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const menu = document.getElementById('menu');
+
+    menuToggle.addEventListener('click', function () {
+        menu.classList.toggle('hidden');
+    });
+</script>
+<div class="max-w-2xl mx-auto" style="margin-bottom: 30px">
+    <div style="margin: 30px"></div>
+    <h1 class="text-2xl font-bold mb-4">Using mutations to drive better testing</h1>
+
+    <p class="mb-4">
+        I'm a big fan of mutation testing. The idea that a tool tries to find weak spots in your work is
+        very appealing. I wrote more about mutation testing in general <a href="mutation-testing-in-rust.html">here</a>.
+        This text will be more about my approach towards testing Qpackt.
+    </p>
+
+    <p class="mb-4">
+        But this obviously is not scalable for long term health of any project. If I'm to take a project seriously, I also have to take
+        its tests seriously.
+    </p>
+    <p class="mb-4">
+        At the very beginning Qpackt had almost no unit tests. I checked only tiny things like password matching and other bits. The remaining
+        stuff was tested manually. It just had so few features, that it didn't do anything else - I have to manually test just by using it.
+        At fd32465cd7a6f493b3587318051fd6b16dd20e0b cargo mutants found the following mutations not killed:
+    </p>
+
+    <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
+    <code class="text-sm text-gray-800">
+MISSED   qpackt-backend/src/dao/version.rs:77:9: replace Dao::delete_version -&gt; crate::error::Result&lt;String&gt; with Ok(String::new()) in 3.7s build + 3.0s test
+MISSED   qpackt-backend/src/config.rs:134:5: replace read_stdin -&gt; Result&lt;String&gt; with Ok("xyzzy".into()) in 3.8s build + 3.0s test
+MISSED   qpackt-backend/src/config.rs:59:9: replace QpacktConfig::save -&gt; Result&lt;()&gt; with Ok(()) in 3.6s build + 3.0s test
+MISSED   qpackt-backend/src/analytics/hash.rs:37:9: replace &lt;impl From for i64&gt;::from -&gt; Self with Default::default() in 3.5s build + 3.0s test
+MISSED   qpackt-backend/src/proxy/handler.rs:96:5: replace previous_url -&gt; Option&lt;(Arc&lt;Url&gt;, VersionName)&gt; with None in 3.5s build + 3.0s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:82:5: replace create_token -&gt; String with "xyzzy".into() in 3.7s build + 3.1s test
+MISSED   qpackt-backend/src/panel/versions/delete.rs:39:5: replace delete_version -&gt; Result&lt;String&gt; with Ok(String::new()) in 3.5s build + 3.0s test
+MISSED   qpackt-backend/src/main.rs:109:5: replace start_http with () in 3.6s build + 3.0s test
+MISSED   qpackt-backend/src/config.rs:51:9: replace QpacktConfig::create with () in 3.5s build + 3.0s test
+MISSED   qpackt-backend/src/analytics/writer.rs:66:29: replace &gt;= with &lt; in request_receiver in 3.6s build + 3.0s test
+MISSED   qpackt-backend/src/dao/version.rs:61:9: replace Dao::register_version -&gt; crate::error::Result&lt;()&gt; with Ok(()) in 3.6s build + 3.0s test
+MISSED   qpackt-backend/src/dao/state.rs:79:5: replace deserialize_row -&gt; Result&lt;Option&lt;T&gt;&gt; with Ok(None) in 3.6s build + 3.0s test
+MISSED   qpackt-backend/src/proxy/handler.rs:65:5: replace proxy_to_new -&gt; HttpResponse with HttpResponse::Ok().finish() in 3.7s build + 3.0s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:142:5: replace unzip_site -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 4.4s build + 3.0s test
+MISSED   qpackt-backend/src/dao/requests.rs:58:9: replace Dao::get_daily_seed -&gt; Result&lt;Option&lt;DailySeed&gt;&gt; with Ok(None) in 4.3s build + 3.1s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:74:26: replace && with || in is_token_valid in 3.5s build + 3.1s test
+MISSED   qpackt-backend/src/dao/state.rs:91:9: replace &lt;impl State for DailySeed&gt;::name -&gt; &'static str with "xyzzy" in 3.5s build + 2.9s test
+MISSED   qpackt-backend/src/proxy/handler.rs:88:5: replace proxy_to_previous -&gt; HttpResponse with HttpResponse::Ok().finish() in 3.5s build + 2.3s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:89:5: replace create_path -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/proxy/mod.rs:61:5: replace serve_challenge -&gt; HttpResponse with HttpResponse::Ok().finish() in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:46:9: replace AcmeChallenge::set_challenge with () in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/dao/version.rs:77:9: replace Dao::delete_version -&gt; crate::error::Result&lt;String&gt; with Ok("xyzzy".into()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/main.rs:140:5: replace create_app_dir -&gt; Result&lt;()&gt; with Ok(()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/server.rs:101:9: replace Versions::add_version with () in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/ssl/mod.rs:40:42: replace &gt; with == in get_certificate in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/config.rs:125:9: replace QpacktConfig::password -&gt; &str with "" in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/server.rs:72:9: replace Versions::update_strategies with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/server.rs:110:9: replace Versions::get_url_for_cookie -&gt; Option&lt;(Arc&lt;Url&gt;, VersionName)&gt; with None in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:124:5: replace find_web_root -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/dao/version.rs:47:9: replace VersionName::matches -&gt; bool with true in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/server.rs:135:5: replace build_version_servers -&gt; Vec&lt;VersionServer&gt; with vec![] in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/analytics/writer.rs:92:5: replace merge_requests -&gt; Vec&lt;Visit&gt; with vec![] in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/error.rs:66:9: replace &lt;impl ResponseError for QpacktError&gt;::status_code -&gt; StatusCode with Default::default() in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:40:9: replace AcmeChallenge::get_proof -&gt; Option&lt;String&gt; with Some(String::new()) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:71:5: replace is_token_valid -&gt; bool with false in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/proxy/handler.rs:104:94: replace != with == in build_response in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:82:5: replace create_token -&gt; String with String::new() in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/versions/delete.rs:39:5: replace delete_version -&gt; Result&lt;String&gt; with Ok("xyzzy".into()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/config.rs:119:9: replace QpacktConfig::domain -&gt; &str with "xyzzy" in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/config.rs:130:5: replace from_yaml -&gt; Result&lt;Option&lt;String&gt;&gt; with Ok(Some(String::new())) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/config.rs:134:5: replace read_stdin -&gt; Result&lt;String&gt; with Ok(String::new()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:71:5: replace is_token_valid -&gt; bool with true in 2.6s build + 2.2s test
+MISSED   qpackt-backend/src/config.rs:98:9: replace QpacktConfig::http_proxy_addr -&gt; &str with "xyzzy" in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/config.rs:98:9: replace QpacktConfig::http_proxy_addr -&gt; &str with "" in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:130:26: replace &gt; with &lt; in find_web_root in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:62:5: replace spawn_receiver_task with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/proxy/mod.rs:35:5: replace start_proxy_http with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/dao/state.rs:48:9: replace Dao::set_state -&gt; Result&lt;()&gt; with Ok(()) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/https_redirect.rs:66:95: replace == with != in &lt;impl Service for CheckHttpsRedirectMiddleware&lt;S&gt;&gt;::call in 2.8s build + 2.2s test
+MISSED   qpackt-backend/src/server.rs:59:24: replace &lt;= with &gt; in Versions::pick_upstream in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:40:9: replace AcmeChallenge::get_proof -&gt; Option&lt;String&gt; with None in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:74:21: replace != with == in is_token_valid in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/dao/version.rs:47:24: replace == with != in VersionName::matches in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/dao/state.rs:36:9: replace Dao::get_state -&gt; Result&lt;Option&lt;T&gt;&gt; with Ok(None) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/dao/requests.rs:62:9: replace Dao::save_daily_seed -&gt; Result&lt;()&gt; with Ok(()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:74:37: replace == with != in is_token_valid in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/server.rs:87:32: replace == with != in Versions::delete_version in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/dao/state.rs:91:9: replace &lt;impl State for DailySeed&gt;::name -&gt; &'static str with "" in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/config.rs:144:5: replace if_empty_then -&gt; String with "xyzzy".into() in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/dao/version.rs:47:9: replace VersionName::matches -&gt; bool with false in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/proxy/handler.rs:53:5: replace proxy_handler -&gt; HttpResponse with HttpResponse::Ok().finish() in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/analytics/mod.rs:80:19: replace &lt; with &gt; in convert_to_response in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/server.rs:117:5: replace start_version_servers with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/dao/visits.rs:65:9: replace Dao::get_visits -&gt; Result&lt;Vec&lt;Visit&gt;&gt; with Ok(vec![]) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/config.rs:130:5: replace from_yaml -&gt; Result&lt;Option&lt;String&gt;&gt; with Ok(None) in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/analytics/hash.rs:83:47: replace &gt; with &lt; in spawn_refresh_loop in 3.0s build + 2.4s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:102:5: replace wait_for_content -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 2.8s build + 2.2s test
+MISSED   qpackt-backend/src/panel/analytics/mod.rs:80:19: replace &lt; with == in convert_to_response in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/dao/state.rs:67:9: replace Dao::read_row -&gt; Result&lt;Option&lt;SqliteRow&gt;&gt; with Ok(None) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/panel/mod.rs:49:5: replace start_panel_http with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/analytics/hash.rs:83:47: replace &gt; with == in spawn_refresh_loop in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:40:9: replace AcmeChallenge::get_proof -&gt; Option&lt;String&gt; with Some("xyzzy".into()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/analytics/hash.rs:56:5: replace init -&gt; Result&lt;()&gt; with Ok(()) in 2.8s build + 2.2s test
+MISSED   qpackt-backend/src/analytics/writer.rs:60:5: replace request_receiver with () in 2.8s build + 2.2s test
+MISSED   qpackt-backend/src/dao/version.rs:41:9: replace &lt;impl Display for VersionName&gt;::fmt -&gt; std::fmt::Result with Ok(Default::default()) in 2.8s build + 2.2s test
+MISSED   qpackt-backend/src/panel/versions/update.rs:59:37: replace == with != in update_versions in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/main.rs:72:5: replace main with () in 3.3s build + 2.1s test
+MISSED   qpackt-backend/src/https_redirect.rs:66:57: replace && with || in &lt;impl Service for CheckHttpsRedirectMiddleware&lt;S&gt;&gt;::call in 3.4s build + 2.2s test
+MISSED   qpackt-backend/src/config.rs:119:9: replace QpacktConfig::domain -&gt; &str with "" in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/proxy/mod.rs:52:5: replace start_proxy_https with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/dao/requests.rs:66:9: replace Dao::save_requests -&gt; Result&lt;()&gt; with Ok(()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/ssl/resolver.rs:49:9: replace &lt;impl ResolvesServerCert for CertResolver&gt;::resolve -&gt; Option&lt;Arc&lt;CertifiedKey&gt;&gt; with None in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/analytics/writer.rs:79:5: replace save_requests with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:51:9: replace AcmeChallenge::clear with () in 2.7s build + 2.1s test
+MISSED   qpackt-backend/src/panel/mod.rs:79:5: replace validate_permission -&gt; Result&lt;HttpResponse&gt; with Ok(HttpResponse::Ok().finish()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/analytics/writer.rs:51:9: replace RequestWriter::save with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/config.rs:122:9: replace QpacktConfig::https_proxy_addr -&gt; Option&lt;&String&gt; with None in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/main.rs:130:5: replace ensure_app_dir_exists -&gt; Result&lt;()&gt; with Ok(()) in 2.6s build + 2.1s test
+MISSED   qpackt-backend/src/server.rs:75:33: replace == with != in Versions::update_strategies in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/proxy/handler.rs:101:5: replace build_response -&gt; HttpResponse with HttpResponse::Ok().finish() in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/server.rs:124:5: replace start_version_server with () in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/dao/visits.rs:44:9: replace Dao::update_visits -&gt; Result&lt;()&gt; with Ok(()) in 2.7s build + 2.2s test
+MISSED   qpackt-backend/src/server.rs:85:9: replace Versions::delete_version with () in 3.2s build + 2.5s test
+169 mutants tested in 13m 2s: 93 missed, 15 caught, 61 unviable
+    </code>
+    </pre>
+    <p class="mb-4" style="margin-top: 10px">
+        Only 15 mutations cought out of 108, so the coverage is below 14%. That's not good. Instead of writing tests checking single functions, I would much rather start testing features, like getting an admin token (with http client). If you think about it, getting a token requires the following things to work:
+    </p>
+    <ul class="list-disc pl-6">
+        <li>Reading config</li>
+        <li>Starting panel http server</li>
+        <li>Deserializing payload</li>
+        <li>Checking password's one-way hash</li>
+        <li>Serializing response</li>
+    </ul>
+    <p class="mb-4" style="margin-top: 10px">
+        Besides, it's more of "functional" test instead of "method" test. It allows to refactor implementation without changing the test's code. And this is only the beginning. Once I have this test, I can reuse parts of it to build more tests, like uploading a page version and all other things that require a token.
+    </p>
+    <p class="mb-4" style="margin-top: 10px">
+        Now, I could just spawn a process with 'Command::new("cargo").spawn()' (with some extra args) but it doesn't work for mutation testing. Mutation testing tools rarely (if ever) write down mutations to disk, so cargo will run unmutated version of code.
+    </p>
+    <p class="mb-4" style="margin-top: 10px">
+        So, I came up with this code (side note: making this testable meant some small refactoring to how the server is started):
+    </p>
+    <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
+    <code class="text-sm text-gray-800">
+use crate::panel::auth::token::TokenResponse;
+    use crate::run_app;
+    use serde_json::json;
+    use std::env;
+    use std::path::{Path, PathBuf};
+    use std::time::Duration;
+    use tokio::fs;
+    use tokio::task::JoinHandle;
+    use tokio::time::sleep;
+
+    /// Builds a config
+    /// Starts backend
+    /// Gets admin token
+    #[tokio::test]
+    async fn test_get_token() {
+        let dir = tmpdir::TmpDir::new("qpackt_dir").await.expect("Unable to create temp dir");
+        let config = write_config_file(&dir.to_path_buf()).await;
+        env::set_var("QPACKT_HTML_DIR", ".");
+        let task = run_app(&config).await;
+        let _process = ProcessHandler { task };
+        let token = get_token().await;
+        assert!(!token.is_empty());
+    }
+
+    async fn write_config_file(dir: &Path) -&gt; PathBuf {
+        // password is "admin"
+        let content =  format!("domain: qpackt.com\nhttp_proxy: 0.0.0.0:8080\npassword: $scrypt$ln=17,r=8,p=1$H63UY378M+ql3bpQMQ37aQ$XXt3kOaWrW/CQr+/lPIDtPlPTLJSHbaaGBEVo3l3wFY\nrun_directory: {}", dir.to_str().unwrap());
+        let config = dir.join("qpackt.yaml");
+        fs::write(&config, content).await.expect("Unable to write config");
+        config
+    }
+
+    async fn get_token() -&gt; String {
+        for _ in 0..5 {
+            let client = reqwest::Client::new();
+            let request = client.post("http://localhost:9080/token").json(&json!({"password":"admin"}));
+            if let Ok(response) = request.send().await {
+                if let Ok(token) = response.json::&lt;TokenResponse&gt;().await {
+                    return token.token;
+                }
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+        panic!("No token after timeout!");
+    }
+
+    /// Convenience struct to ensure task aborted when dropped.
+    struct ProcessHandler {
+        task: JoinHandle&lt;()&gt;,
+    }
+
+    impl Drop for ProcessHandler {
+        fn drop(&mut self) {
+            self.task.abort();
+        }
+    }
+    </code>
+    </pre>
+    <p class="mb-4" style="margin-top: 10px">
+        It runs the main server, tries to grab a token and tests whether token isn't empty.
+        Let see how many mutations it killed:
+    </p>
+    <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
+    <code class="text-sm text-gray-800">
+MISSED   qpackt-backend/src/analytics/hash.rs:37:9: replace &lt;impl From for i64&gt;::from -&gt; Self with Default::default() in 7.6s build + 11.1s test
+MISSED   qpackt-backend/src/tests/mod.rs:38:9: replace token_tests::test_get_token with () in 3.3s build + 2.3s test
+MISSED   qpackt-backend/src/analytics/writer.rs:60:5: replace request_receiver with () in 11.1s build + 10.9s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:46:9: replace AcmeChallenge::set_challenge with () in 9.5s build + 10.8s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:51:9: replace AcmeChallenge::clear with () in 8.8s build + 10.7s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:102:5: replace wait_for_content -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 9.5s build + 10.2s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:124:5: replace find_web_root -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 8.6s build + 10.5s test
+MISSED   qpackt-backend/src/config.rs:134:5: replace read_stdin -&gt; Result&lt;String&gt; with Ok(String::new()) in 8.2s build + 10.9s test
+MISSED   qpackt-backend/src/main.rs:152:5: replace create_app_dir -&gt; Result&lt;()&gt; with Ok(()) in 9.4s build + 10.6s test
+MISSED   qpackt-backend/src/analytics/writer.rs:79:5: replace save_requests with () in 9.4s build + 10.5s test
+MISSED   qpackt-backend/src/server.rs:75:33: replace == with != in Versions::update_strategies in 8.5s build + 11.1s test
+MISSED   qpackt-backend/src/analytics/writer.rs:66:29: replace &gt;= with &lt; in request_receiver in 8.9s build + 11.0s test
+MISSED   qpackt-backend/src/proxy/handler.rs:88:5: replace proxy_to_previous -&gt; HttpResponse with HttpResponse::Ok().finish() in 8.4s build + 10.8s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:89:5: replace create_path -&gt; Result&lt;PathBuf&gt; with Ok(Default::default()) in 8.6s build + 10.1s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:74:37: replace == with != in is_token_valid in 8.6s build + 11.1s test
+MISSED   qpackt-backend/src/server.rs:124:5: replace start_version_server with () in 9.7s build + 11.0s test
+MISSED   qpackt-backend/src/dao/version.rs:47:24: replace == with != in VersionName::matches in 7.6s build + 11.0s test
+MISSED   qpackt-backend/src/dao/state.rs:67:9: replace Dao::read_row -&gt; Result&lt;Option&lt;SqliteRow&gt;&gt; with Ok(None) in 11.5s build + 10.8s test
+MISSED   qpackt-backend/src/server.rs:72:9: replace Versions::update_strategies with () in 9.2s build + 10.7s test
+MISSED   qpackt-backend/src/proxy/handler.rs:53:5: replace proxy_handler -&gt; HttpResponse with HttpResponse::Ok().finish() in 8.9s build + 10.6s test
+MISSED   qpackt-backend/src/dao/version.rs:47:9: replace VersionName::matches -&gt; bool with false in 9.1s build + 10.7s test
+MISSED   qpackt-backend/src/panel/versions/delete.rs:39:5: replace delete_version -&gt; Result&lt;String&gt; with Ok(String::new()) in 8.7s build + 10.6s test
+MISSED   qpackt-backend/src/dao/visits.rs:44:9: replace Dao::update_visits -&gt; Result&lt;()&gt; with Ok(()) in 9.6s build + 10.7s test
+MISSED   qpackt-backend/src/panel/versions/upload.rs:130:26: replace &gt; with == in find_web_root in 9.3s build + 10.6s test
+MISSED   qpackt-backend/src/panel/analytics/mod.rs:80:19: replace &lt; with &gt; in convert_to_response in 8.5s build + 10.8s test
+MISSED   qpackt-backend/src/analytics/hash.rs:83:47: replace &gt; with &lt; in spawn_refresh_loop in 9.0s build + 11.1s test
+MISSED   qpackt-backend/src/proxy/mod.rs:52:5: replace start_proxy_https with () in 9.6s build + 10.6s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:40:9: replace AcmeChallenge::get_proof -&gt; Option&lt;String&gt; with None in 9.9s build + 10.8s test
+MISSED   qpackt-backend/src/analytics/writer.rs:92:5: replace merge_requests -&gt; Vec&lt;Visit&gt; with vec![] in 8.5s build + 10.5s test
+MISSED   qpackt-backend/src/tests/mod.rs:55:9: replace token_tests::get_token -&gt; String with "xyzzy".into() in 10.7s build + 10.5s test
+MISSED   qpackt-backend/src/ssl/mod.rs:40:42: replace &gt; with &lt; in get_certificate in 9.7s build + 11.0s test
+MISSED   qpackt-backend/src/proxy/handler.rs:65:5: replace proxy_to_new -&gt; HttpResponse with HttpResponse::Ok().finish() in 9.5s build + 10.9s test
+MISSED   qpackt-backend/src/config.rs:144:5: replace if_empty_then -&gt; String with String::new() in 9.0s build + 11.2s test
+MISSED   qpackt-backend/src/dao/requests.rs:66:9: replace Dao::save_requests -&gt; Result&lt;()&gt; with Ok(()) in 9.2s build + 10.7s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:71:5: replace is_token_valid -&gt; bool with false in 8.9s build + 10.5s test
+MISSED   qpackt-backend/src/proxy/mod.rs:35:5: replace start_proxy_http with () in 9.7s build + 10.6s test
+MISSED   qpackt-backend/src/proxy/handler.rs:104:94: replace != with == in build_response in 9.9s build + 10.8s test
+MISSED   qpackt-backend/src/error.rs:66:9: replace &lt;impl ResponseError for QpacktError&gt;::status_code -&gt; StatusCode with Default::default() in 8.1s build + 10.8s test
+MISSED   qpackt-backend/src/dao/version.rs:117:9: replace Dao::save_versions -&gt; crate::error::Result&lt;()&gt; with Ok(()) in 8.5s build + 10.6s test
+MISSED   qpackt-backend/src/main.rs:142:5: replace ensure_app_dir_exists -&gt; Result&lt;()&gt; with Ok(()) in 8.6s build + 10.7s test
+MISSED   qpackt-backend/src/dao/requests.rs:62:9: replace Dao::save_daily_seed -&gt; Result&lt;()&gt; with Ok(()) in 9.4s build + 10.9s test
+MISSED   qpackt-backend/src/dao/version.rs:90:9: replace Dao::list_versions -&gt; crate::error::Result&lt;Vec&lt;Version&gt;&gt; with Ok(vec![]) in 9.7s build + 10.3s test
+MISSED   qpackt-backend/src/dao/version.rs:61:9: replace Dao::register_version -&gt; crate::error::Result&lt;()&gt; with Ok(()) in 8.5s build + 10.2s test
+MISSED   qpackt-backend/src/panel/analytics/mod.rs:80:19: replace &lt; with == in convert_to_response in 8.6s build + 11.1s test
+MISSED   qpackt-backend/src/analytics/writer.rs:51:9: replace RequestWriter::save with () in 9.4s build + 10.9s test
+MISSED   qpackt-backend/src/https_redirect.rs:66:95: replace == with != in &lt;impl Service for CheckHttpsRedirectMiddleware&lt;S&gt;&gt;::call in 9.5s build + 10.9s test
+MISSED   qpackt-backend/src/dao/version.rs:47:9: replace VersionName::matches -&gt; bool with true in 8.5s build + 10.8s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:40:9: replace AcmeChallenge::get_proof -&gt; Option&lt;String&gt; with Some("xyzzy".into()) in 9.5s build + 10.6s test
+MISSED   qpackt-backend/src/panel/versions/update.rs:59:37: replace == with != in update_versions in 9.6s build + 10.9s test
+MISSED   qpackt-backend/src/server.rs:101:9: replace Versions::add_version with () in 9.6s build + 11.0s test
+MISSED   qpackt-backend/src/tests/mod.rs:75:13: replace token_tests::&lt;impl Drop for ProcessHandler&gt;::drop with () in 9.5s build + 10.8s test
+MISSED   qpackt-backend/src/analytics/hash.rs:80:5: replace spawn_refresh_loop with () in 9.2s build + 10.9s test
+MISSED   qpackt-backend/src/config.rs:122:9: replace QpacktConfig::https_proxy_addr -&gt; Option&lt;&String&gt; with None in 8.6s build + 10.9s test
+MISSED   qpackt-backend/src/config.rs:144:5: replace if_empty_then -&gt; String with "xyzzy".into() in 7.6s build + 11.1s test
+MISSED   qpackt-backend/src/analytics/hash.rs:83:47: replace &gt; with == in spawn_refresh_loop in 9.3s build + 10.8s test
+MISSED   qpackt-backend/src/dao/version.rs:77:9: replace Dao::delete_version -&gt; crate::error::Result&lt;String&gt; with Ok("xyzzy".into()) in 9.5s build + 10.7s test
+MISSED   qpackt-backend/src/config.rs:51:9: replace QpacktConfig::create with () in 8.6s build + 11.0s test
+MISSED   qpackt-backend/src/ssl/challenge.rs:40:9: replace AcmeChallenge::get_proof -&gt; Option&lt;String&gt; with Some(String::new()) in 9.5s build + 10.9s test
+MISSED   qpackt-backend/src/server.rs:135:5: replace build_version_servers -&gt; Vec&lt;VersionServer&gt; with vec![] in 9.6s build + 10.6s test
+MISSED   qpackt-backend/src/proxy/handler.rs:101:5: replace build_response -&gt; HttpResponse with HttpResponse::Ok().finish() in 8.8s build + 10.8s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:82:5: replace create_token -&gt; String with "xyzzy".into() in 8.8s build + 11.0s test
+MISSED   qpackt-backend/src/main.rs:75:5: replace main with () in 11.5s build + 11.0s test
+MISSED   qpackt-backend/src/panel/mod.rs:79:5: replace validate_permission -&gt; Result&lt;HttpResponse&gt; with Ok(HttpResponse::Ok().finish()) in 11.4s build + 10.8s test
+MISSED   qpackt-backend/src/ssl/mod.rs:40:42: replace &gt; with == in get_certificate in 9.3s build + 10.9s test
+MISSED   qpackt-backend/src/dao/state.rs:91:9: replace &lt;impl State for DailySeed&gt;::name -&gt; &'static str with "" in 8.8s build + 11.1s test
+MISSED   qpackt-backend/src/config.rs:119:9: replace QpacktConfig::domain -&gt; &str with "xyzzy" in 7.6s build + 10.9s test
+MISSED   qpackt-backend/src/dao/state.rs:48:9: replace Dao::set_state -&gt; Result&lt;()&gt; with Ok(()) in 9.4s build + 10.7s test
+MISSED   qpackt-backend/src/dao/state.rs:91:9: replace &lt;impl State for DailySeed&gt;::name -&gt; &'static str with "xyzzy" in 7.6s build + 11.3s test
+MISSED   qpackt-backend/src/main.rs:82:5: replace run_with_args with () in 8.9s build + 11.0s test
+MISSED   qpackt-backend/src/server.rs:59:24: replace &lt;= with &gt; in Versions::pick_upstream in 8.6s build + 10.9s test
+MISSED   qpackt-backend/src/panel/versions/delete.rs:39:5: replace delete_version -&gt; Result&lt;String&gt; with Ok("xyzzy".into()) in 8.9s build + 10.5s test
+MISSED   qpackt-backend/src/server.rs:85:9: replace Versions::delete_version with () in 9.5s build + 10.8s test
+MISSED   qpackt-backend/src/panel/auth/token.rs:71:5: replace is_token_valid -&gt; bool with true in 9.4s build + 10.9s test
+MISSED   qpackt-backend/src/proxy/handler.rs:96:5: replace previous_url -&gt; Option&lt;(Arc&lt;Url&gt;, VersionName)&gt; with None in 8.7s build + 10.7s test
+MISSED   qpackt-backend/src/dao/state.rs:79:5: replace deserialize_row -&gt; Result&lt;Option&lt;T&gt;&gt; with Ok(None) in 8.9s build + 10.9s test
+179 mutants tested in 41m 11s: 75 missed, 39 caught, 65 unviable
+    </code>
+    </pre>
+    <p class="mb-4" style="margin-top: 10px">
+        39 mutations were caught (out of total 114), that means about 34% coverage. Up from 14%, not bad for just one more test. You
+        can read more about mutation testing <a href="mutation-testing-in-rust.html" class="underline">here</a>.
+    </p>
+    <p>
+        <a href="blog.html" class="underline">Back to blog</a>
+    </p>
+</div>
+</body>
+
+</html>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qpackt :: Roadmap</title>
+    <title>Qpackt :: Ramblings About Software Engineering</title>
     <link href="tailwind.min.css" rel="stylesheet">
 </head>
 
@@ -53,25 +53,32 @@
         menu.classList.toggle('hidden');
     });
 </script>
-
 <div class="max-w-2xl mx-auto" style="margin-bottom: 30px">
     <div style="margin: 30px"></div>
-    <p class="mb-4">Despite Qpackt being barely an MVP right now, I have some great plans for it. I imagine it can be a one-stop-shop for web deployment and monitoring. Before I get there though, there are many steps in between. Here's a basic roadmap for the next year or so:</p>
 
-    <ol class="list-decimal pl-6 mb-6">
-        <li>
-            <p><strong>Get 100 stars on GitHub and gather feedback about missing features.</strong> I'd like to see some interest and start coding features that are actually needed. There is nothing worse than spending months creating something nobody wants. This phase can take weeks or months, obviously.</p>
-        </li>
-        <li>
-            <p><strong>Make it production-ready.</strong> I mean, it works as it is (if you can read it), but it's quite far from what I consider "good." Things that need more love: code quality (eliminate unwraps, achieve at least 70% mutation testing coverage), performance acceptance tests, better deployment options (maybe create a Docker image), and user support (via Discord or something else). Probably doable in 2-3 months.</p>
-        </li>
-        <li>
-            <p><strong>Once it's production-ready,</strong> Qpackt will enter a stabilization period. Hopefully, more people will use it, and they will provide feedback on what could be done differently. This should take around 6 months. After this, every version will be LTS. A new minor version should be released every few weeks. A new major version should be released about every year initially, with decreasing frequency over time.</p>
-        </li>
-    </ol>
+    <div class="max-w-lg mx-auto mt-8">
+        <a href="1-percent-better-every-day.html"><h2 class="text-3xl font-bold mb-4">1 % better every day</h2></a>
+        <p class="text-gray-800 leading-relaxed">
+            Don't shoot for the stars to get to the moon. Instead, fix this pothole right in front of you.
+        </p>
+        <a href="1-percent-better-every-day.html" class="underline">Continued...</a>
+    </div>
 
-    <p>Follow me on <a href="https://twitter.com/QPackt" target="_blank" class="text-blue-500">Twitter</a> if you want to know about the progress.</p>
+    <div class="max-w-lg mx-auto mt-8">
+        <a href="mutation-testing-in-rust.html"><h2 class="text-3xl font-bold mb-4">Mutation testing in Rust</h2></a>
+        <p class="text-gray-800 leading-relaxed">
+            Improving your tests one mutant at a time (and fighting spurious line coverage).
+        </p>
+        <a href="mutation-testing-in-rust.html" class="underline">Continued...</a>
+    </div>
 
+    <div class="max-w-lg mx-auto mt-8">
+        <a href="testing-qpackt-with-cargo-mutants.html"><h2 class="text-3xl font-bold mb-4">Using mutants to find weak spots in Qpackt. Part #1</h2></a>
+        <p class="text-gray-800 leading-relaxed">
+            It's too late for TDD, what now?
+        </p>
+        <a href="testing-qpackt-with-cargo-mutants.html" class="underline">Continued...</a>
+    </div>
 </div>
 </body>
 
