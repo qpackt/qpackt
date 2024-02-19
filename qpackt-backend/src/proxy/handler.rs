@@ -69,7 +69,8 @@ async fn proxy_to_new(
     let hash = calculate_visitor_hash(&client_request);
     debug!("Proxying request to {} with visitor hash {:?}", url, hash);
     writer.save(Request::new(hash, version, client_request.uri().clone())).await;
-    build_response(payload, client_request.head(), url.deref().clone(), Some(cookie)).await
+    let destination = build_upstream_url(&client_request, url.deref().clone()).await;
+    build_response(payload, client_request.head(), destination, Some(cookie)).await
 }
 
 fn calculate_visitor_hash(client_request: &HttpRequest) -> VisitorHash {
