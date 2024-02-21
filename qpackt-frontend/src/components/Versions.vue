@@ -17,32 +17,39 @@
 <!--along with this program.  If not, see <https://www.gnu.org/licenses/>.-->
 
 <script setup>
-import {addVersion, deleteVersions, getToken, listVersions} from "../state.js";
-import {useToast} from "primevue/usetoast";
+import {addVersion, state_deleteVersions, getToken, state_listVersions, state_deleteVersion} from "../state.js";
 import {onMounted, reactive} from "vue";
+import {http} from "../http.js";
+import {useToast} from "primevue/usetoast";
 import Toast from "primevue/toast";
 import FileUpload from "primevue/fileupload";
 import Card from 'primevue/card';
 import Panel from 'primevue/panel';
-import Strategy from "./Strategy.vue";
-import {http} from "../http.js";
 import Button from "primevue/button";
+import InputGroup from "primevue/inputgroup";
+import InputText from "primevue/inputtext";
+import RadioButton from "primevue/radiobutton";
+import InputGroupAddon from "primevue/inputgroupaddon";
+import InputNumber from "primevue/inputnumber";
 
 const toast = useToast();
-const versions = reactive(listVersions());
+const versions = reactive(state_listVersions());
 
 const onAdvancedUpload = async (e) => {
   toast.add({severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000})
-  deleteVersions()
+  state_deleteVersions()
   await loadVersions()
 }
 
 async function loadVersions() {
-  let versions = listVersions();
   if (versions.list.length === 0) {
     http.get('/list-versions').then(r => {
       for (const version of r.data) {
-        addVersion(version.name, version.strategy)
+        if (version.strategy.UrlParam !== undefined) {
+          addVersion(version.name, 'UrlParam', 0, version.strategy.UrlParam)
+        } else {
+          addVersion(version.name, 'Weight', version.strategy.Weight, '')
+        }
       }
     })
   }
@@ -50,12 +57,36 @@ async function loadVersions() {
 
 
 async function updateVersions() {
-  await http.post(`/update-versions`, versions.list)
+  const request = []
+  for (const version of versions.list) {
+    if (version.selection === 'Weight') {
+      request.push({
+        name: version.name,
+        strategy: {
+          Weight: version.weight
+        }
+      })
+    } else {
+      request.push({
+        name: version.name,
+        strategy: {
+          UrlParam: version.url
+        }
+      })
+    }
+  }
+  await http.post(`/update-versions`, request)
 }
 
 async function before(event) {
   const token = getToken()
   event.xhr.setRequestHeader("authorization", `Bearer ${token}`)
+}
+
+async function deleteVersion(name) {
+  http.delete(`/delete-version/${name}`).then((e) => {
+    state_deleteVersion(name)
+  })
 }
 
 onMounted(() => loadVersions())
@@ -68,10 +99,25 @@ onMounted(() => loadVersions())
     <template #content>
       <p v-for="version in versions.list" class="m-0">
         <Panel :header="version.name">
-          <Strategy :strategy="version.strategy" :name="version.name"/>
+          <InputGroup>
+            <InputGroupAddon>
+              <RadioButton v-model="version.selection" inputId="Weight" name="selection" value="Weight"/>
+              <label for="selection" class="ml-2">&nbsp;Weight&nbsp;</label>
+              <InputNumber v-model="version.weight" mode="decimal" :min="0" :max="100"
+                           :disabled="version.selection !== 'Weight'"/>
+            </InputGroupAddon>
+            <InputGroupAddon>
+              <RadioButton v-model="version.selection" inputId="UrlParam" name="selection" value="UrlParam"/>
+              <label for="selection" class="ml-2">&nbsp;UrlParam&nbsp;</label>
+              <InputText type="text" v-model="version.url" :disabled="version.selection !== 'UrlParam'"/>
+            </InputGroupAddon>
+            <InputGroupAddon>
+              <Button @click="deleteVersion(version.name)" severity="danger">Delete</Button>
+            </InputGroupAddon>
+          </InputGroup>
         </Panel>
       </p>
-      <Button @click="updateVersions" :disabled="!versions.changed">Update</Button>
+      <Button @click="updateVersions">Update</Button>
     </template>
 
   </Card>

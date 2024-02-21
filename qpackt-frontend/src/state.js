@@ -17,7 +17,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { reactive } from 'vue';
+import {reactive} from 'vue';
 
 /**
  * This is application state. Implementation provides the same functionality as vuex or redux but with slightly
@@ -48,11 +48,7 @@ const state = reactive({
      */
     versions: {
         /**
-         * Indicates whether there were some changes made. Used to enable "Update" button
-         */
-        changed: false,
-        /**
-         * List of versions. Single version is {'name':name, 'strategy':strategy}
+         * List of versions. Single version is {'name':name, 'selection': selection, 'weight': weight, 'url': url}
          */
         list: [],
     }
@@ -80,38 +76,18 @@ export function updateAnalyticsQuery(dateStart, dateEnd) {
     state.analytics.dateEnd = dateEnd
 }
 
-export function addVersion(name, value) {
-    state.versions.list.push({name: name, strategy: value})
+export function addVersion(name, selection, weight, url) {
+    state.versions.list.push({name: name, selection: selection, weight: weight, url: url})
 }
 
-export function updateVersion(name, value) {
-    for (const version of state.versions.list) {
-        if (version.name === name) {
-            version.strategy = value
-            break
-        }
-    }
-    state.versions.changed = true
-}
-
-export function listVersions() {
+export function state_listVersions() {
     return state.versions
 }
 
-export function deleteVersions() {
-    state.versions.changed = false
+export function state_deleteVersions() {
     state.versions.list.length = 0
 }
 
-export function deleteVersion(name) {
-    state.versions.changed = false
-    let index = -1;
-    for (let i = 0; i <  state.versions.list.length; i++) {
-        if (state.versions.list[i].name === name) {
-            index = i;
-        }
-    }
-    if (index >= 0) {
-        state.versions.list.splice(index, 1)
-    }
+export function state_deleteVersion(name) {
+    state.versions.list = state.versions.list.filter((e) => e.name !== name)
 }
