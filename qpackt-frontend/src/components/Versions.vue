@@ -43,7 +43,7 @@ const onAdvancedUpload = async (e) => {
 
 async function loadVersions() {
   if (versions.list.length === 0) {
-    http.get('/list-versions').then(r => {
+    http.get('/versions').then(r => {
       for (const version of r.data) {
         if (version.strategy.UrlParam !== undefined) {
           addVersion(version.name, 'UrlParam', 0, version.strategy.UrlParam)
@@ -75,7 +75,7 @@ async function updateVersions() {
       })
     }
   }
-  await http.post(`/update-versions`, request)
+  await http.put(`/versions`, request)
 }
 
 async function before(event) {
@@ -84,7 +84,7 @@ async function before(event) {
 }
 
 async function deleteVersion(name) {
-  http.delete(`/delete-version/${name}`).then((e) => {
+  http.delete(`/version/${name}`).then((e) => {
     state_deleteVersion(name)
   })
 }
@@ -126,7 +126,7 @@ onMounted(() => loadVersions())
     <template #title>Upload a new version</template>
     <template #content>
       <Toast/>
-      <FileUpload name="upload[]" url="/upload-version" @upload="onAdvancedUpload($event)" @before-send="before($event)"
+      <FileUpload name="upload[]" url="/version" @upload="onAdvancedUpload($event)" @before-send="before($event)"
                   :multiple="false" accept=".zip">
         <template #empty>
           <p>Drag and drop files to here to upload a new web version</p>

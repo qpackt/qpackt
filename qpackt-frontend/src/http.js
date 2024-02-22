@@ -44,6 +44,11 @@ export const http = {
         return await this.axiosInstance.post(endpoint, data, config)
     },
 
+    async put(endpoint, data) {
+        const config = this.getConfig()
+        return await this.axiosInstance.put(endpoint, data, config)
+    },
+
     async delete(endpoint) {
         const config = this.getConfig()
         return await this.axiosInstance.delete(endpoint, config)

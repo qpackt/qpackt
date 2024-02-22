@@ -42,7 +42,8 @@ mod analytics;
 pub(crate) mod auth;
 mod versions;
 
-const PANEL_HTTP: &str = "0.0.0.0:9080"; // TODO turn port into constant (for tests)
+const PANEL_HTTP: &str = "0.0.0.0:9080";
+// TODO turn port into constant (for tests)
 const PANEL_HTTPS: &str = "0.0.0.0:9443";
 
 pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>, tls_config: Option<ServerConfig>) {
@@ -55,12 +56,11 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
                 .app_data(app_config.clone())
                 .app_data(versions.clone())
                 .app_data(dao.clone())
-                .service(web::resource("/update-versions").route(web::post().to(update_versions)))
-                .service(web::resource("/upload-version").route(web::post().to(upload_version)))
-                .service(web::resource("/list-versions").route(web::get().to(list_versions)))
                 .service(web::resource("/analytics").route(web::post().to(get_analytics)))
-                .service(web::resource("/delete-version/{name}").route(web::delete().to(delete_version)))
                 .service(web::resource("/token").delete(invalidate_token).post(get_token))
+                .service(web::resource("/version").post(upload_version))
+                .service(web::resource("/version/{name}").route(web::delete().to(delete_version)))
+                .service(web::resource("/versions").get(list_versions).put(update_versions))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", html_path).index_file("index.html"))
         });
@@ -82,7 +82,9 @@ fn validate_permission(request: &HttpRequest) -> Result<HttpResponse> {
     let Ok(value) = header.to_str() else {
         return Err(QpacktError::Forbidden);
     };
-    let Some(parts) = value.split_once(' ') else { return Err(QpacktError::Forbidden) };
+    let Some(parts) = value.split_once(' ') else {
+        return Err(QpacktError::Forbidden);
+    };
     if is_token_valid(parts.1) {
         Ok(HttpResponse::new(StatusCode::OK))
     } else {
