@@ -3,14 +3,14 @@ use crate::dao::version::{Version, VersionName};
 use crate::error::{QpacktError, Result};
 use crate::manager::strategy::Strategy;
 use actix_files::Files;
+use actix_web::dev::{Server, ServerHandle};
 use actix_web::{App, HttpServer};
 use log::{debug, error, info, warn};
 use rand::{thread_rng, Rng};
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::task::JoinHandle;
 use url::Url;
 
 /// All servers for versions will be started on localhost:port where starting port is the value below.
@@ -25,7 +25,7 @@ pub(crate) struct VersionServer {
     pub(crate) version: Version,
     port: u16,
     upstream: Arc<Url>,
-    task: Option<JoinHandle<std::io::Result<()>>>,
+    server_handle: Option<ServerHandle>,
 }
 
 impl Versions {
@@ -86,8 +86,8 @@ impl Versions {
         for (i, v) in versions.iter().enumerate() {
             if &v.version.name == name {
                 let version = versions.remove(i);
-                if let Some(task) = version.task {
-                    task.abort();
+                if let Some(server_handle) = version.server_handle {
+                    server_handle.stop(true).await;
                 } else {
                     warn!("No running task for version `{}` that's being removed", name);
                 }
@@ -122,13 +122,18 @@ async fn start_version_servers(handlers: &mut Vec<VersionServer>, run_dir: &Path
 
 async fn start_version_server(version_handler: &mut VersionServer, run_dir: &Path) {
     let path = run_dir.join(VERSIONS_SUBDIRECTORY).join(&version_handler.version.web_root);
-    let task = tokio::spawn({
-        HttpServer::new(move || App::new().service(Files::new("/", path.clone()).index_file("index.html")))
-            .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, version_handler.port))
-            .unwrap()
-            .run()
-    });
-    version_handler.task = Some(task);
+    let port = version_handler.port;
+    let server = build_server(path, port);
+    let handle = server.handle();
+    tokio::spawn(server);
+    version_handler.server_handle = Some(handle);
+}
+
+fn build_server(path: PathBuf, port: u16) -> Server {
+    HttpServer::new(move || App::new().service(Files::new("/", path.clone()).index_file("index.html")))
+        .bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, port))
+        .unwrap()
+        .run()
 }
 
 fn build_version_servers(versions: Vec<Version>) -> Vec<VersionServer> {
@@ -141,5 +146,10 @@ fn build_version_servers(versions: Vec<Version>) -> Vec<VersionServer> {
 }
 
 fn build_version_server(version: Version, port: u16) -> VersionServer {
-    VersionServer { port, upstream: Arc::new(Url::parse(format!("http://localhost:{}", port).as_str()).unwrap()), version, task: None }
+    VersionServer {
+        port,
+        upstream: Arc::new(Url::parse(format!("http://localhost:{}", port).as_str()).unwrap()),
+        version,
+        server_handle: None,
+    }
 }
