@@ -20,6 +20,7 @@
 use crate::analytics::writer::RequestWriter;
 use crate::https_redirect::CheckHttpsRedirect;
 use crate::proxy::handler::proxy_handler;
+use crate::reverse_proxy::ReverseProxies;
 use crate::server::Versions;
 use crate::ssl::challenge::AcmeChallenge;
 use actix_web::web::{Data, Path};
@@ -31,7 +32,13 @@ use rustls::ServerConfig;
 
 pub(super) mod handler;
 
-pub(super) fn start_proxy_http(addr: &str, versions: Data<Versions>, writer: Data<RequestWriter>, ssl_challenge: Data<AcmeChallenge>) {
+pub(super) fn start_proxy_http(
+    addr: &str,
+    versions: Data<Versions>,
+    writer: Data<RequestWriter>,
+    ssl_challenge: Data<AcmeChallenge>,
+    reverse_proxies: Data<ReverseProxies>,
+) {
     tokio::spawn(
         HttpServer::new(move || {
             App::new()
@@ -39,6 +46,7 @@ pub(super) fn start_proxy_http(addr: &str, versions: Data<Versions>, writer: Dat
                 .app_data(versions.clone())
                 .app_data(writer.clone())
                 .app_data(ssl_challenge.clone())
+                .app_data(reverse_proxies.clone())
                 .service(web::resource("/.well-known/acme-challenge/{token}").route(web::get().to(serve_challenge)))
                 .default_service(web::to(proxy_handler))
         })

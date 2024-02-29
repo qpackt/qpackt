@@ -20,6 +20,7 @@
 import {onMounted, ref, watch} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import TabMenu from "primevue/tabmenu";
+
 const router = useRouter();
 const route = useRoute();
 
@@ -32,6 +33,10 @@ const items = ref([
   {
     label: 'Analytics',
     route: '/analytics'
+  },
+  {
+    label: 'Reverse Proxies',
+    route: '/proxies'
   },
 ]);
 
@@ -51,7 +56,7 @@ watch(
         active.value = 0
       }
     },
-    { immediate: true }
+    {immediate: true}
 );
 </script>
 
@@ -60,7 +65,8 @@ watch(
     <TabMenu v-model:activeIndex="active" :model="items">
       <template #item="{ label, item, props }">
         <router-link v-if="item.route" v-slot="routerProps" :to="item.route" custom>
-          <a :href="routerProps.href" v-bind="props.action" @click="($event) => routerProps.navigate($event)" @keydown.enter.space="($event) => routerProps.navigate($event)">
+          <a :href="routerProps.href" v-bind="props.action" @click="($event) => routerProps.navigate($event)"
+             @keydown.enter.space="($event) => routerProps.navigate($event)">
             <span v-bind="props.label">{{ label }}</span>
           </a>
         </router-link>

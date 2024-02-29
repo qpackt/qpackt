@@ -51,6 +51,15 @@ const state = reactive({
          * List of versions. Single version is {'name':name, 'selection': selection, 'weight': weight, 'url': url}
          */
         list: [],
+    },
+    /**
+     * Backend apps / reverse proxy list
+     */
+    proxy: {
+        /**
+         * List of reverse proxies. Ordered by 'prefix DESC' - this is how it's implemented in the backend.
+         */
+        list: []
     }
 });
 
@@ -90,4 +99,13 @@ export function state_deleteVersions() {
 
 export function state_deleteVersion(name) {
     state.versions.list = state.versions.list.filter((e) => e.name !== name)
+}
+
+export function state_listProxies() {
+    return state.proxy
+}
+
+
+export function state_setProxies(proxies) {
+    state.proxy.list = proxies
 }

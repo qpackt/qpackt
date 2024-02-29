@@ -22,9 +22,11 @@ use crate::analytics::hash::VisitorHash;
 use crate::analytics::writer::RequestWriter;
 use crate::dao::requests::Request;
 use crate::dao::version::VersionName;
+use crate::reverse_proxy::{ReverseProxies, ReverseProxy};
 use crate::server::Versions;
 use actix_web::cookie::Cookie;
 use actix_web::dev::RequestHead;
+use actix_web::http::Uri;
 use actix_web::web::{Data, Payload};
 use actix_web::{HttpRequest, HttpResponse};
 use awc::cookie::time::{Duration, OffsetDateTime};
@@ -33,6 +35,7 @@ use awc::{Client, ClientRequest};
 use log::debug;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::ops::{Add, Deref};
+use std::str::FromStr;
 use std::sync::Arc;
 use url::Url;
 
@@ -42,9 +45,38 @@ use url::Url;
 const QPACKT_COOKIE_NAME: &str = "QPACKT_VERSION";
 
 /// Basic proxy handler (method agnostic).
-/// Finds cookie in client's request and previously set url.
+/// Checks for [ReverseProxy] prefix, if found - sends the request there.
+/// Otherwise, finds cookie in client's request and previous version.
 /// If not found, then creates a new cookie and picks url from [Versions]
 pub(crate) async fn proxy_handler(
+    payload: Payload,
+    client_request: HttpRequest,
+    versions: Data<Versions>,
+    reverse_proxies: Data<ReverseProxies>,
+    writer: Data<RequestWriter>,
+) -> HttpResponse {
+    if let Some(rev) = reverse_proxies.find_by_uri(client_request.uri()) {
+        serve_reverse_proxy(payload, &client_request, rev).await
+    } else {
+        serve_static(payload, client_request, versions, writer).await
+    }
+}
+
+async fn serve_reverse_proxy(payload: Payload, client_request: &HttpRequest, rev: ReverseProxy) -> HttpResponse {
+    let url = build_reverse_proxy_url(rev, client_request.uri());
+    build_response(payload, client_request.head(), url, None).await
+}
+
+fn build_reverse_proxy_url(reverse_proxy: ReverseProxy, uri: &Uri) -> Url {
+    let mut url = Url::from_str(&reverse_proxy.target).unwrap();
+    let new_path = format!("{}{}", url.path(), &uri.path()[reverse_proxy.prefix.len()..]);
+    url.set_query(uri.query());
+    url.set_path(&new_path);
+    debug!("Hitting reverse proxy {} for for uri {} => {}", reverse_proxy.target, uri, url);
+    url
+}
+
+async fn serve_static(
     payload: Payload,
     client_request: HttpRequest,
     versions: Data<Versions>,
@@ -69,7 +101,7 @@ async fn proxy_to_new(
     let hash = calculate_visitor_hash(&client_request);
     debug!("Proxying request to {} with visitor hash {:?}", url, hash);
     writer.save(Request::new(hash, version, client_request.uri().clone())).await;
-    let destination = build_upstream_url(&client_request, url.deref().clone()).await;
+    let destination = build_static_url(&client_request, url.deref().clone()).await;
     build_response(payload, client_request.head(), destination, Some(cookie)).await
 }
 
@@ -88,7 +120,7 @@ async fn proxy_to_previous(
 ) -> HttpResponse {
     let hash = calculate_visitor_hash(&client_request);
     debug!("Proxying request to {} with visitor hash {:?}", url, hash);
-    let destination = build_upstream_url(&client_request, url).await;
+    let destination = build_static_url(&client_request, url).await;
     writer.save(Request::new(hash, version, client_request.uri().clone())).await;
     build_response(payload, client_request.head(), destination, None).await
 }
@@ -123,7 +155,7 @@ fn build_request(head: &RequestHead, destination: Url) -> ClientRequest {
     client.request_from(destination.as_str(), head).no_decompress()
 }
 
-async fn build_upstream_url(client_request: &HttpRequest, mut url: Url) -> Url {
+async fn build_static_url(client_request: &HttpRequest, mut url: Url) -> Url {
     url.set_path(client_request.uri().path());
     url.set_query(client_request.uri().query());
     url

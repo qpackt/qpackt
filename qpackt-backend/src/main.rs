@@ -44,6 +44,7 @@ mod proxy;
 mod server;
 mod ssl;
 
+mod reverse_proxy;
 mod tests;
 
 use crate::analytics::writer::RequestWriter;
@@ -54,6 +55,7 @@ use crate::error::QpacktError;
 use crate::error::Result;
 use crate::panel::start_panel_http;
 use crate::proxy::{start_proxy_http, start_proxy_https};
+use crate::reverse_proxy::ReverseProxies;
 use crate::server::Versions;
 use crate::ssl::challenge::AcmeChallenge;
 use crate::ssl::resolver::try_build_resolver;
@@ -123,9 +125,18 @@ async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version
     let dao = Data::new(dao);
     let servers = Data::new(servers);
     let writer = Data::new(writer);
+    let reverse_proxies = ReverseProxies::default();
+    reverse_proxies.set(dao.list_reverse_proxies().await.unwrap()).await;
+    let reverse_proxies = Data::new(reverse_proxies);
     let ssl_challenge = AcmeChallenge::new().await;
-    start_proxy_http(qpackt_config.http_proxy_addr(), servers.clone(), writer.clone(), Data::new(ssl_challenge.clone()));
-    start_panel_http(qpackt_config.clone(), dao.clone(), servers.clone(), None);
+    start_proxy_http(
+        qpackt_config.http_proxy_addr(),
+        servers.clone(),
+        writer.clone(),
+        Data::new(ssl_challenge.clone()),
+        reverse_proxies.clone(),
+    );
+    start_panel_http(qpackt_config.clone(), dao.clone(), servers.clone(), None, reverse_proxies.clone());
 
     if let Some(https_proxy_addr) = qpackt_config.https_proxy_addr() {
         let certificate = get_certificate(qpackt_config.domain(), qpackt_config.app_run_directory(), ssl_challenge.clone()).await;
@@ -134,7 +145,7 @@ async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version
         let tls_config = ServerConfig::builder().with_safe_defaults().with_no_client_auth().with_cert_resolver(Arc::new(resolver));
         FORCE_HTTPS_REDIRECT.store(true, Ordering::Relaxed);
         start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), tls_config.clone());
-        start_panel_http(qpackt_config, dao, servers.clone(), Some(tls_config));
+        start_panel_http(qpackt_config, dao, servers.clone(), Some(tls_config), reverse_proxies);
     }
 }
 

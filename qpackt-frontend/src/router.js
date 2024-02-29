@@ -17,10 +17,11 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-const Versions = () => import('./components/Versions.vue')
 const Analytics = () => import("./components/Analytics.vue")
+const Proxies = () => import('./components/ReverseProxy.vue')
+const Versions = () => import('./components/Versions.vue')
 
-import { createWebHistory, createRouter } from "vue-router";
+import {createWebHistory, createRouter} from "vue-router";
 import Login from "./components/Login.vue";
 
 const routes = [
@@ -52,6 +53,14 @@ const routes = [
         path: "/versions",
         name: "versions",
         component: Versions,
+        meta: {
+            requiresAuth: true,
+        }
+    },
+    {
+        path: "/proxies",
+        name: "proxies",
+        component: Proxies,
         meta: {
             requiresAuth: true,
         }

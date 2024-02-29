@@ -23,10 +23,12 @@ use crate::error::{QpacktError, Result};
 use crate::https_redirect::CheckHttpsRedirect;
 use crate::panel::analytics::get_analytics;
 use crate::panel::auth::token::{invalidate_token, is_token_valid};
+use crate::panel::reverse_proxy::{create_proxy, delete_proxy, list_proxies};
 use crate::panel::versions::delete::delete_version;
 use crate::panel::versions::list::list_versions;
 use crate::panel::versions::update::update_versions;
 use crate::panel::versions::upload::upload_version;
+use crate::reverse_proxy::ReverseProxies;
 use crate::server::Versions;
 use actix_files::Files;
 use actix_web::http::header;
@@ -40,13 +42,20 @@ use std::env;
 
 mod analytics;
 pub(crate) mod auth;
+pub(crate) mod reverse_proxy;
 mod versions;
 
 const PANEL_HTTP: &str = "0.0.0.0:9080";
 // TODO turn port into constant (for tests)
 const PANEL_HTTPS: &str = "0.0.0.0:9443";
 
-pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versions: Data<Versions>, tls_config: Option<ServerConfig>) {
+pub(super) fn start_panel_http(
+    config: Data<QpacktConfig>,
+    dao: Data<Dao>,
+    versions: Data<Versions>,
+    tls_config: Option<ServerConfig>,
+    reverse_proxies: Data<ReverseProxies>,
+) {
     tokio::spawn({
         let app_config = config.clone();
         let server = HttpServer::new(move || {
@@ -56,7 +65,10 @@ pub(super) fn start_panel_http(config: Data<QpacktConfig>, dao: Data<Dao>, versi
                 .app_data(app_config.clone())
                 .app_data(versions.clone())
                 .app_data(dao.clone())
+                .app_data(reverse_proxies.clone())
                 .service(web::resource("/analytics").route(web::post().to(get_analytics)))
+                .service(web::resource("/proxy").get(list_proxies).post(create_proxy))
+                .service(web::resource("/proxy/{id}").delete(delete_proxy))
                 .service(web::resource("/token").delete(invalidate_token).post(get_token))
                 .service(web::resource("/version").post(upload_version))
                 .service(web::resource("/version/{name}").route(web::delete().to(delete_version)))

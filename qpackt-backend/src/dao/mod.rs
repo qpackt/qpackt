@@ -19,6 +19,7 @@
 
 mod inner;
 pub(crate) mod requests;
+pub(crate) mod reverse_proxy;
 mod state;
 pub(crate) mod version;
 pub(crate) mod visits;
