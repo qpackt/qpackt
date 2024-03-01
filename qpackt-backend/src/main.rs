@@ -45,6 +45,8 @@ mod server;
 mod ssl;
 
 mod reverse_proxy;
+
+#[cfg(test)]
 mod tests;
 
 use crate::analytics::writer::RequestWriter;

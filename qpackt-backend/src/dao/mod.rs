@@ -66,5 +66,5 @@ impl Dao {
 }
 
 async fn get_sqlite_connection(url: &str) -> Result<SqliteConnection> {
-    SqliteConnection::connect(url).await.map_err(|e| QpacktError::DatabaseError(e.to_string()))
+    SqliteConnection::connect(url).await.map_err(|e| QpacktError::DatabaseError(format!("{} for url: {}", e, url)))
 }
