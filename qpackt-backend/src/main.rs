@@ -58,7 +58,7 @@ use crate::reverse_proxy::ReverseProxies;
 use crate::server::Versions;
 use crate::ssl::{FORCE_HTTPS_REDIRECT, get_certificate};
 use crate::ssl::challenge::AcmeChallenge;
-use crate::ssl::resolver::try_build_resolver;
+use crate::ssl::resolver::{read_intermediate_cert, try_build_resolver};
 
 mod analytics;
 mod config;
@@ -146,7 +146,8 @@ async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version
     if let Some(https_proxy_addr) = qpackt_config.https_proxy_addr() {
         let certificate = get_certificate(qpackt_config.domain(), qpackt_config.app_run_directory(), ssl_challenge.clone()).await;
         ssl_challenge.clear().await;
-        let resolver = try_build_resolver(certificate);
+        let intermediate_cert = read_intermediate_cert(qpackt_config.app_run_directory());
+        let resolver = try_build_resolver(certificate, intermediate_cert);
         let tls_config = ServerConfig::builder().with_safe_defaults().with_no_client_auth().with_cert_resolver(Arc::new(resolver));
         FORCE_HTTPS_REDIRECT.store(true, Ordering::Relaxed);
         start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), tls_config.clone(), reverse_proxies.clone());
