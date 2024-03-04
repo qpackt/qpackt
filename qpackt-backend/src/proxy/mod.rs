@@ -17,18 +17,19 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use actix_web::{App, HttpResponse, HttpServer, web};
+use actix_web::web::{Data, Path};
+use awc::body::BoxBody;
+use awc::error::StatusCode;
+use log::{debug, warn};
+use rustls::ServerConfig;
+
 use crate::analytics::writer::RequestWriter;
 use crate::https_redirect::CheckHttpsRedirect;
 use crate::proxy::handler::proxy_handler;
 use crate::reverse_proxy::ReverseProxies;
 use crate::server::Versions;
 use crate::ssl::challenge::AcmeChallenge;
-use actix_web::web::{Data, Path};
-use actix_web::{web, App, HttpResponse, HttpServer};
-use awc::body::BoxBody;
-use awc::error::StatusCode;
-use log::{debug, warn};
-use rustls::ServerConfig;
 
 pub(super) mod handler;
 
@@ -50,15 +51,19 @@ pub(super) fn start_proxy_http(
                 .service(web::resource("/.well-known/acme-challenge/{token}").route(web::get().to(serve_challenge)))
                 .default_service(web::to(proxy_handler))
         })
-        .bind(addr)
-        .unwrap()
-        .run(),
+            .bind(addr)
+            .unwrap()
+            .run(),
     );
 }
 
-pub(super) fn start_proxy_https(addr: &str, versions: Data<Versions>, writer: Data<RequestWriter>, tls_config: ServerConfig) {
+pub(super) fn start_proxy_https(addr: &str, versions: Data<Versions>, writer: Data<RequestWriter>, tls_config: ServerConfig, reverse_proxies: Data<ReverseProxies>) {
     tokio::spawn(
-        HttpServer::new(move || App::new().app_data(versions.clone()).app_data(writer.clone()).default_service(web::to(proxy_handler)))
+        HttpServer::new(move || App::new()
+            .app_data(versions.clone())
+            .app_data(writer.clone())
+            .app_data(reverse_proxies.clone())
+            .default_service(web::to(proxy_handler)))
             .bind_rustls_021(addr, tls_config)
             .unwrap()
             .run(),

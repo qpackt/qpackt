@@ -19,19 +19,47 @@
 
 #![forbid(unsafe_code)]
 #![warn(
-    anonymous_parameters,
-    missing_copy_implementations,
-    missing_debug_implementations,
-    nonstandard_style,
-    rust_2018_idioms,
-    single_use_lifetimes,
-    trivial_casts,
-    trivial_numeric_casts,
-    unreachable_pub,
-    unused_extern_crates,
-    unused_qualifications,
-    variant_size_differences
+anonymous_parameters,
+missing_copy_implementations,
+missing_debug_implementations,
+nonstandard_style,
+rust_2018_idioms,
+single_use_lifetimes,
+trivial_casts,
+trivial_numeric_casts,
+unreachable_pub,
+unused_extern_crates,
+unused_qualifications,
+variant_size_differences
 )]
+
+use std::{env, fs};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+
+use actix_web::web::Data;
+use log::info;
+use rustls::ServerConfig;
+use tokio::select;
+use tokio::signal::unix::{signal, SignalKind};
+use tokio::task::JoinHandle;
+
+use crate::analytics::writer::RequestWriter;
+use crate::config::QpacktConfig;
+use crate::dao::Dao;
+use crate::dao::version::Version;
+use crate::error::QpacktError;
+use crate::error::Result;
+use crate::panel::start_panel_http;
+use crate::proxy::{start_proxy_http, start_proxy_https};
+use crate::reverse_proxy::ReverseProxies;
+use crate::server::Versions;
+use crate::ssl::{FORCE_HTTPS_REDIRECT, get_certificate};
+use crate::ssl::challenge::AcmeChallenge;
+use crate::ssl::resolver::try_build_resolver;
+
 mod analytics;
 mod config;
 pub mod constants;
@@ -48,31 +76,6 @@ mod reverse_proxy;
 
 #[cfg(test)]
 mod tests;
-
-use crate::analytics::writer::RequestWriter;
-use crate::config::QpacktConfig;
-use crate::dao::version::Version;
-use crate::dao::Dao;
-use crate::error::QpacktError;
-use crate::error::Result;
-use crate::panel::start_panel_http;
-use crate::proxy::{start_proxy_http, start_proxy_https};
-use crate::reverse_proxy::ReverseProxies;
-use crate::server::Versions;
-use crate::ssl::challenge::AcmeChallenge;
-use crate::ssl::resolver::try_build_resolver;
-use crate::ssl::{get_certificate, FORCE_HTTPS_REDIRECT};
-use actix_web::web::Data;
-use log::info;
-use rustls::ServerConfig;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
-use std::{env, fs};
-use tokio::select;
-use tokio::signal::unix::{signal, SignalKind};
-use tokio::task::JoinHandle;
 
 #[tokio::main]
 async fn main() {
@@ -146,7 +149,7 @@ async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version
         let resolver = try_build_resolver(certificate);
         let tls_config = ServerConfig::builder().with_safe_defaults().with_no_client_auth().with_cert_resolver(Arc::new(resolver));
         FORCE_HTTPS_REDIRECT.store(true, Ordering::Relaxed);
-        start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), tls_config.clone());
+        start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), tls_config.clone(), reverse_proxies.clone());
         start_panel_http(qpackt_config, dao, servers.clone(), Some(tls_config), reverse_proxies);
     }
 }
