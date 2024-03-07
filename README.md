@@ -1,4 +1,4 @@
-# Qpackt :: Web Server Designed to Make Life Easy
+# Qpackt :: Web Server with Analytics and A/B testing
 
 ## About
 
