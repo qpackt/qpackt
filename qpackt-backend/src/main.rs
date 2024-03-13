@@ -46,7 +46,8 @@ use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::task::JoinHandle;
 
-use crate::analytics::writer::RequestWriter;
+use crate::analytics::event_writer::EventWriter;
+use crate::analytics::http_request_log_writer::HttpRequestLogWriter;
 use crate::config::QpacktConfig;
 use crate::dao::Dao;
 use crate::dao::version::Version;
@@ -98,10 +99,11 @@ pub(crate) async fn run_app(config_path: &PathBuf) -> JoinHandle<()> {
     let config = QpacktConfig::read(config_path).await.unwrap();
     ensure_app_dir_exists(config.app_run_directory()).unwrap();
     let dao = Dao::init(config.app_run_directory()).await.unwrap();
-    let writer = RequestWriter::new(dao.clone());
+    let http_request_log_writer = HttpRequestLogWriter::new(dao.clone());
+    let event_writer = EventWriter::new(dao.clone());
     analytics::hash::init(dao.clone()).await.unwrap();
     let versions = dao.list_versions().await.unwrap();
-    tokio::spawn(start_http(config, dao, versions, writer))
+    tokio::spawn(start_http(config, dao, versions, http_request_log_writer, event_writer))
 }
 
 /// Waits for signal and exits
@@ -124,22 +126,25 @@ async fn wait(handler: JoinHandle<()>) -> ! {
 }
 
 /// Starts actix processes to serve admin's panel and http proxy.
-async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version>, writer: RequestWriter) {
+async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version>, http_request_log_writer: HttpRequestLogWriter, event_writer: EventWriter) {
     let qpackt_config = Data::new(qpackt_config);
     let servers = Versions::start(versions, qpackt_config.app_run_directory()).await;
     let dao = Data::new(dao);
     let servers = Data::new(servers);
-    let writer = Data::new(writer);
+    let http_request_log_writer = Data::new(http_request_log_writer);
+    let event_writer = Data::new(event_writer);
     let reverse_proxies = ReverseProxies::default();
     reverse_proxies.set(dao.list_reverse_proxies().await.unwrap()).await;
     let reverse_proxies = Data::new(reverse_proxies);
     let ssl_challenge = AcmeChallenge::new().await;
     start_proxy_http(
         qpackt_config.http_proxy_addr(),
+        dao.clone(),
         servers.clone(),
-        writer.clone(),
+        http_request_log_writer.clone(),
         Data::new(ssl_challenge.clone()),
         reverse_proxies.clone(),
+        event_writer.clone(),
     );
     start_panel_http(qpackt_config.clone(), dao.clone(), servers.clone(), None, reverse_proxies.clone());
 
@@ -150,7 +155,7 @@ async fn start_http(qpackt_config: QpacktConfig, dao: Dao, versions: Vec<Version
         let resolver = try_build_resolver(certificate, intermediate_cert);
         let tls_config = ServerConfig::builder().with_safe_defaults().with_no_client_auth().with_cert_resolver(Arc::new(resolver));
         FORCE_HTTPS_REDIRECT.store(true, Ordering::Relaxed);
-        start_proxy_https(https_proxy_addr, servers.clone(), writer.clone(), tls_config.clone(), reverse_proxies.clone());
+        start_proxy_https(https_proxy_addr, dao.clone(), servers.clone(), http_request_log_writer.clone(), tls_config.clone(), reverse_proxies.clone(), event_writer.clone());
         start_panel_http(qpackt_config, dao, servers.clone(), Some(tls_config), reverse_proxies);
     }
 }

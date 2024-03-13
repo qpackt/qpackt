@@ -17,35 +17,37 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::dao::requests::Request;
-use crate::dao::visits::Visit;
-use crate::dao::Dao;
-use log::error;
 use std::collections::HashMap;
 use std::mem::replace;
 use std::time::Duration;
-use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::time::{timeout, Instant};
 
-/// Simple actor to accept [Request]s that need to be written to DB to enable analytics.
+use log::error;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::{Instant, timeout};
+
+use crate::dao::Dao;
+use crate::dao::requests::CreateHttpRequestLog;
+use crate::dao::visits::Visit;
+
+/// Simple actor to accept [CreateHttpRequestLog]s that need to be written to DB to enable analytics.
 #[derive(Clone)]
-pub(crate) struct RequestWriter {
-    sender: Sender<Request>,
+pub(crate) struct HttpRequestLogWriter {
+    sender: Sender<CreateHttpRequestLog>,
 }
 
-/// Buffer length for [Request]s before saving to DB.
+/// Buffer length for [CreateHttpRequestLog]s before saving to DB.
 const MAX_REQUESTS: usize = 1024;
 
-impl RequestWriter {
-    /// Creates new [RequestWriter] and starts background thread for actually saving requests to DB.
+impl HttpRequestLogWriter {
+    /// Creates new [HttpRequestLogWriter] and starts background thread for actually saving requests to DB.
     pub(crate) fn new(dao: Dao) -> Self {
         let (sender, receiver) = tokio::sync::mpsc::channel(65536);
         tokio::spawn(request_receiver(receiver, dao));
         Self { sender }
     }
 
-    /// Accepts [Request] that need to be saved to DB for analytics.
-    pub(crate) async fn save(&self, request: Request) {
+    /// Accepts [CreateHttpRequestLog] that need to be saved to DB for analytics.
+    pub(crate) async fn save(&self, request: CreateHttpRequestLog) {
         // Send request to an internal channel. This timeout needs to be fairly short as it will block the client's http request.
         // It will only fail if the channel's buffer is full, which will only happen if DB can't catch up.
         if let Err(e) = self.sender.send_timeout(request, Duration::from_millis(50)).await {
@@ -54,9 +56,9 @@ impl RequestWriter {
     }
 }
 
-/// Starts a receiver loop. Once a [Request] is received is waits max 1 second for more requests and
+/// Starts a receiver loop. Once a [CreateHttpRequestLog] is received is waits max 1 second for more requests and
 /// then saves them to DB.
-async fn request_receiver(mut receiver: Receiver<Request>, dao: Dao) {
+async fn request_receiver(mut receiver: Receiver<CreateHttpRequestLog>, dao: Dao) {
     let mut buffer = Vec::with_capacity(MAX_REQUESTS);
     while let Some(request) = receiver.recv().await {
         buffer.push(request);
@@ -74,8 +76,8 @@ async fn request_receiver(mut receiver: Receiver<Request>, dao: Dao) {
     }
 }
 
-/// Calls [Dao] to save [Request]s to DB. Replaces buffer with new one.
-async fn save_requests(dao: &Dao, buffer: &mut Vec<Request>) {
+/// Calls [Dao] to save [CreateHttpRequestLog]s to DB. Replaces buffer with new one.
+async fn save_requests(dao: &Dao, buffer: &mut Vec<CreateHttpRequestLog>) {
     let requests = replace(buffer, Vec::with_capacity(MAX_REQUESTS));
     if let Err(e) = dao.save_requests(&requests).await {
         error!("Unable to save requests to DB: {}", e);
@@ -86,9 +88,9 @@ async fn save_requests(dao: &Dao, buffer: &mut Vec<Request>) {
     }
 }
 
-/// 'Merges' [Request]s into separate [Visit]s so that they can be shown in analytics.
+/// 'Merges' [CreateHttpRequestLog]s into separate [Visit]s so that they can be shown in analytics.
 /// Uses [VisitorHash] to recognize requests from the same client.
-fn merge_requests(requests: Vec<Request>) -> Vec<Visit> {
+fn merge_requests(requests: Vec<CreateHttpRequestLog>) -> Vec<Visit> {
     let mut visits = HashMap::with_capacity(requests.len());
     for r in requests {
         let visit = visits.entry(r.visitor).or_insert_with(|| Visit {

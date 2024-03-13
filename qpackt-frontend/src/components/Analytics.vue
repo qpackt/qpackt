@@ -25,7 +25,7 @@ import Button from "primevue/button";
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Panel from 'primevue/panel';
-import {state_getAnalytics, setAnalyticsResults, updateAnalyticsQuery} from "../state.js";
+import {setAnalyticsResults, state_getAnalytics, state_setEventsStats, updateAnalyticsQuery} from "../state.js";
 import {http} from "../http.js";
 
 const dateStart = ref(initialPastDate())
@@ -47,6 +47,10 @@ async function loadAnalytics() {
   }
 }
 
+function setEventsResults(data) {
+  state_setEventsStats(data)
+}
+
 async function fetchAnalytics() {
   let request = {
     from_time: dateStart.value.toJSON(),
@@ -58,6 +62,9 @@ async function fetchAnalytics() {
       stats: r.data.versions_stats,
     })
   })
+  http.get(`/events/stats?time_from=${request.from_time}&time_to=${request.to_time}`).then(r => {
+    setEventsResults(r.data)
+  })
 }
 
 onMounted(() => loadAnalytics())
@@ -67,13 +74,13 @@ onMounted(() => loadAnalytics())
   <Panel>
     <InputGroup>
       <InputGroupAddon>
-        <label for="selection" class="ml-2">From&nbsp;</label>
-        <Calendar v-model="dateStart" date-format="yy-mm-dd" showTime hourFormat="24"
+        <label class="ml-2" for="selection">From&nbsp;</label>
+        <Calendar v-model="dateStart" date-format="yy-mm-dd" hourFormat="24" showTime
                   @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
       </InputGroupAddon>
       <InputGroupAddon>
-        <label for="selection" class="ml-2">&nbsp;to&nbsp;</label>
-        <Calendar v-model="dateEnd" date-format="yy-mm-dd" showTime hourFormat="24"
+        <label class="ml-2" for="selection">&nbsp;to&nbsp;</label>
+        <Calendar v-model="dateEnd" date-format="yy-mm-dd" hourFormat="24" showTime
                   @date-select="updateAnalyticsQuery(dateStart, dateEnd)"/>
       </InputGroupAddon>
       <InputGroupAddon>
@@ -83,8 +90,8 @@ onMounted(() => loadAnalytics())
   </Panel>
   <div style="padding: 10px"></div>
   <Panel>
-    Total visits: {{analytics.totalVisits}}
-    <DataTable :value="analytics.stats" table-style="min-width: 50rem" showGridlines stripedRows>
+    Total visits: {{ analytics.totalVisits }}
+    <DataTable :value="analytics.stats" showGridlines stripedRows table-style="min-width: 50rem">
       <Column field="name" header="Name"></Column>
       <Column field="visit_count" header="Visit count"></Column>
       <Column field="average_requests" header="Av. requests"></Column>
@@ -92,4 +99,15 @@ onMounted(() => loadAnalytics())
       <Column field="bounce_rate" header="Bounce rate"></Column>
     </DataTable>
   </Panel>
+  <div v-for="item in analytics.events.events_percent_list">
+    <div style="padding: 10px"></div>
+    <Panel>
+      {{ item.event }}
+      <DataTable :value="item.percents" showGridlines stripedRows table-style="min-width: 50rem">
+        <Column field="version" header="Version"></Column>
+        <Column field="percent" header="Percent"></Column>
+      </DataTable>
+    </Panel>
+  </div>
+
 </template>

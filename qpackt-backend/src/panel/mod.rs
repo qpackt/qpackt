@@ -17,10 +17,23 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::env;
+
+use actix_files::Files;
+use actix_web::{App, HttpRequest, HttpResponse, HttpServer, web};
+use actix_web::http::header;
+use actix_web::web::Data;
+use awc::http::StatusCode;
+use log::warn;
+use rustls::ServerConfig;
+
+use auth::token::get_token;
+
 use crate::config::QpacktConfig;
 use crate::dao::Dao;
 use crate::error::{QpacktError, Result};
 use crate::https_redirect::CheckHttpsRedirect;
+use crate::panel::analytics::events::{get_events_csv, get_events_stats};
 use crate::panel::analytics::get_analytics;
 use crate::panel::auth::token::{invalidate_token, is_token_valid};
 use crate::panel::reverse_proxy::{create_proxy, delete_proxy, list_proxies};
@@ -30,15 +43,6 @@ use crate::panel::versions::update::update_versions;
 use crate::panel::versions::upload::upload_version;
 use crate::reverse_proxy::ReverseProxies;
 use crate::server::Versions;
-use actix_files::Files;
-use actix_web::http::header;
-use actix_web::web::Data;
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use auth::token::get_token;
-use awc::http::StatusCode;
-use log::warn;
-use rustls::ServerConfig;
-use std::env;
 
 mod analytics;
 pub(crate) mod auth;
@@ -73,6 +77,8 @@ pub(super) fn start_panel_http(
                 .service(web::resource("/version").post(upload_version))
                 .service(web::resource("/version/{name}").route(web::delete().to(delete_version)))
                 .service(web::resource("/versions").get(list_versions).put(update_versions))
+                .service(web::resource("/events/csv").get(get_events_csv))
+                .service(web::resource("/events/stats").get(get_events_stats))
                 // This needs to be at the end of all `service` calls so that backend (api) calls will have a chance to match routes.
                 .service(Files::new("/", html_path).index_file("index.html"))
         });

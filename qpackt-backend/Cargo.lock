@@ -1801,6 +1801,7 @@ dependencies = [
  "actix-web",
  "arc-swap",
  "awc",
+ "bytes",
  "chrono",
  "env_logger",
  "futures",

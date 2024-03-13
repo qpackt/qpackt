@@ -20,15 +20,17 @@
 //! Contains structs and methods to CRUD users' requests.
 //! This data is later used in analytics.
 
-use crate::analytics::hash::VisitorHash;
-use crate::dao::state::State;
-use crate::dao::version::VersionName;
-use crate::dao::{get_sqlite_connection, Dao};
-use crate::error::{QpacktError, Result};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use actix_web::http::Uri;
 use log::debug;
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::analytics::hash::VisitorHash;
+use crate::dao::{Dao, get_sqlite_connection};
+use crate::dao::state::State;
+use crate::dao::version::VersionName;
+use crate::error::{QpacktError, Result};
 
 /// Daily seed used to creating visitors' hashes ([VisitorHash]).
 /// It isn't really used every time a new hash is needed. Instead, [crate::analytics::hash::CURRENT_INIT] in hash module is used.
@@ -39,14 +41,14 @@ pub(crate) struct DailySeed {
 }
 
 #[derive(Debug)]
-pub(crate) struct Request {
+pub(crate) struct CreateHttpRequestLog {
     pub(crate) time: u64,
     pub(crate) visitor: VisitorHash,
     pub(crate) version: VersionName,
     pub(crate) uri: Uri,
 }
 
-impl Request {
+impl CreateHttpRequestLog {
     pub(crate) fn new(visitor: VisitorHash, version: VersionName, uri: Uri) -> Self {
         Self { time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(), visitor, version, uri }
     }
@@ -62,7 +64,7 @@ impl Dao {
         self.set_state(seed).await
     }
 
-    pub(crate) async fn save_requests(&self, requests: &[Request]) -> Result<()> {
+    pub(crate) async fn save_requests(&self, requests: &[CreateHttpRequestLog]) -> Result<()> {
         debug!("Saving requests: {}", requests.len());
         let url = self.inner.get_read_write_url().await;
         let mut conn = get_sqlite_connection(&url).await?;

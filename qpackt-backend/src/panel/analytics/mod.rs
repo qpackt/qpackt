@@ -17,16 +17,20 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::dao::version::VersionName;
-use crate::dao::visits::Visit;
-use crate::dao::Dao;
-use crate::error::Result;
-use crate::panel::validate_permission;
-use actix_web::web::{Data, Json};
+use std::collections::HashMap;
+
 use actix_web::{HttpRequest, Responder};
+use actix_web::web::{Data, Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::dao::Dao;
+use crate::dao::version::VersionName;
+use crate::dao::visits::Visit;
+use crate::error::Result;
+use crate::panel::validate_permission;
+
+pub(crate) mod events;
 
 /// Time in seconds below which a visit is counted as a bounce visit
 const BOUNCE_VISIT_MAX_LENGTH: u64 = 5;

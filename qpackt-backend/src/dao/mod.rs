@@ -17,19 +17,22 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+use std::path::Path;
+use std::sync::Arc;
+
+use sqlx::Connection;
+use sqlx::SqliteConnection;
+
+use crate::dao::inner::DaoInner;
+use crate::error::{QpacktError, Result};
+
 mod inner;
 pub(crate) mod requests;
 pub(crate) mod reverse_proxy;
 mod state;
 pub(crate) mod version;
 pub(crate) mod visits;
-
-use crate::dao::inner::DaoInner;
-use crate::error::{QpacktError, Result};
-use sqlx::Connection;
-use sqlx::SqliteConnection;
-use std::path::Path;
-use std::sync::Arc;
+pub(crate) mod events;
 
 /// Default file name with main qpackt's database.
 const SQLITE_FILE: &str = "qpackt.sqlite";

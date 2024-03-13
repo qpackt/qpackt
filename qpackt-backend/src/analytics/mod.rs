@@ -18,4 +18,5 @@
 */
 
 pub(crate) mod hash;
-pub(crate) mod writer;
+pub(crate) mod http_request_log_writer;
+pub(crate) mod event_writer;

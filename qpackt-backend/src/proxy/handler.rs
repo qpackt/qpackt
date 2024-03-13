@@ -17,27 +17,29 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::analytics;
-use crate::analytics::hash::VisitorHash;
-use crate::analytics::writer::RequestWriter;
-use crate::dao::requests::Request;
-use crate::dao::version::VersionName;
-use crate::reverse_proxy::{ReverseProxies, ReverseProxy};
-use crate::server::Versions;
-use actix_web::cookie::Cookie;
-use actix_web::dev::RequestHead;
-use actix_web::http::Uri;
-use actix_web::web::{Data, Payload};
-use actix_web::{HttpRequest, HttpResponse};
-use awc::cookie::time::{Duration, OffsetDateTime};
-use awc::http::StatusCode;
-use awc::{Client, ClientRequest};
-use log::debug;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::ops::{Add, Deref};
 use std::str::FromStr;
 use std::sync::Arc;
+
+use actix_web::{HttpRequest, HttpResponse};
+use actix_web::cookie::Cookie;
+use actix_web::dev::RequestHead;
+use actix_web::http::Uri;
+use actix_web::web::{Data, Payload};
+use awc::{Client, ClientRequest};
+use awc::cookie::time::{Duration, OffsetDateTime};
+use awc::http::StatusCode;
+use log::debug;
 use url::Url;
+
+use crate::analytics;
+use crate::analytics::hash::VisitorHash;
+use crate::analytics::http_request_log_writer::HttpRequestLogWriter;
+use crate::dao::requests::CreateHttpRequestLog;
+use crate::dao::version::VersionName;
+use crate::reverse_proxy::{ReverseProxies, ReverseProxy};
+use crate::server::Versions;
 
 /// A cookie that is used to recognize which version was served to the client in previous requests.
 /// If no cookie is set then assume it's the first request and use [Strategy] to decide which version will be served
@@ -53,7 +55,7 @@ pub(crate) async fn proxy_handler(
     client_request: HttpRequest,
     versions: Data<Versions>,
     reverse_proxies: Data<ReverseProxies>,
-    writer: Data<RequestWriter>,
+    writer: Data<HttpRequestLogWriter>,
 ) -> HttpResponse {
     if let Some(rev) = reverse_proxies.find_by_uri(client_request.uri()) {
         serve_reverse_proxy(payload, &client_request, rev).await
@@ -80,7 +82,7 @@ async fn serve_static(
     payload: Payload,
     client_request: HttpRequest,
     versions: Data<Versions>,
-    writer: Data<RequestWriter>,
+    writer: Data<HttpRequestLogWriter>,
 ) -> HttpResponse {
     match previous_url(&client_request, &versions).await {
         None => proxy_to_new(payload, client_request, versions, writer).await,
@@ -92,7 +94,7 @@ async fn proxy_to_new(
     payload: Payload,
     client_request: HttpRequest,
     versions: Data<Versions>,
-    writer: Data<RequestWriter>,
+    writer: Data<HttpRequestLogWriter>,
 ) -> HttpResponse {
     let Ok((url, version)) = versions.pick_upstream(client_request.query_string()).await else {
         return HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR);
@@ -100,7 +102,7 @@ async fn proxy_to_new(
     let cookie = create_new_cookie(version.clone());
     let hash = calculate_visitor_hash(&client_request);
     debug!("Proxying request to {} with visitor hash {:?}", url, hash);
-    writer.save(Request::new(hash, version, client_request.uri().clone())).await;
+    writer.save(CreateHttpRequestLog::new(hash, version, client_request.uri().clone())).await;
     let destination = build_static_url(&client_request, url.deref().clone()).await;
     build_response(payload, client_request.head(), destination, Some(cookie)).await
 }
@@ -115,13 +117,13 @@ async fn proxy_to_previous(
     payload: Payload,
     client_request: HttpRequest,
     url: Url,
-    writer: Data<RequestWriter>,
+    writer: Data<HttpRequestLogWriter>,
     version: VersionName,
 ) -> HttpResponse {
     let hash = calculate_visitor_hash(&client_request);
     debug!("Proxying request to {} with visitor hash {:?}", url, hash);
     let destination = build_static_url(&client_request, url).await;
-    writer.save(Request::new(hash, version, client_request.uri().clone())).await;
+    writer.save(CreateHttpRequestLog::new(hash, version, client_request.uri().clone())).await;
     build_response(payload, client_request.head(), destination, None).await
 }
 

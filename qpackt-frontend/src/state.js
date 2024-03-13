@@ -42,6 +42,26 @@ const state = reactive({
         dateEnd: {},
         totalVisits: 0,
         stats: [],
+        events: {
+            /**
+             * Vec of event stats. Single item is:
+             * {
+             *             "event": "TIME_ON_PAGE_7",
+             *             "percents": [
+             *                 {
+             *                     "version": "2024_03_13__09_49_32",
+             *                     "percent": 0.0
+             *                 },
+             *                 {
+             *                     "version": "2024_03_16__14_17_39",
+             *                     "percent": 200.0
+             *                 }
+             *             ]
+             *         }
+             *  One item per event. Each item has stats for each version.
+             */
+            events_percent_list: []
+        }
     },
     /**
      * /versions page's state
@@ -78,6 +98,10 @@ export function state_getAnalytics() {
 export function setAnalyticsResults(analytics) {
     state.analytics.totalVisits = analytics.totalVisits
     state.analytics.stats = analytics.stats
+}
+
+export function state_setEventsStats(events) {
+    state.analytics.events = events
 }
 
 export function updateAnalyticsQuery(dateStart, dateEnd) {

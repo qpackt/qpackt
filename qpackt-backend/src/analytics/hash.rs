@@ -17,20 +17,35 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-use crate::dao::requests::DailySeed;
-use crate::dao::Dao;
-use crate::error::Result;
-use log::{debug, info};
-use rand::{thread_rng, Rng, RngCore};
-use serde::Serialize;
+use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 use std::ops::Add;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime};
 
+use log::debug;
+use rand::{Rng, RngCore, thread_rng};
+use serde::{Deserialize, Serialize};
+
+use crate::dao::Dao;
+use crate::dao::requests::DailySeed;
+use crate::error::Result;
+
 /// Visitor's hash. Created from daily seed, IP address and User-Agent
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub(crate) struct VisitorHash(u64);
+
+impl Display for VisitorHash {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl VisitorHash {
+    pub(crate) fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+}
 
 impl From<VisitorHash> for i64 {
     fn from(value: VisitorHash) -> Self {
@@ -65,14 +80,13 @@ pub(crate) fn create(ip: IpAddr, ident: Vec<u8>) -> VisitorHash {
     create_from_init(&ip, &ident, init)
 }
 
-fn create_from_init(ip: &IpAddr, ident: &Vec<u8>, init: u64) -> VisitorHash {
+fn create_from_init(ip: &IpAddr, ident: &[u8], init: u64) -> VisitorHash {
     let mut hash = init;
     match &ip {
         IpAddr::V4(addr) => multiply(&mut hash, addr.octets().as_slice()),
         IpAddr::V6(addr) => multiply(&mut hash, addr.octets().as_slice()),
     };
     multiply(&mut hash, ident);
-    info!("HASH {} {} {} {:?}", init, ip, hash, ident);
     VisitorHash(hash)
 }
 
@@ -113,10 +127,12 @@ async fn create_daily_seed(dao: &Dao) -> Result<DailySeed> {
 
 #[cfg(test)]
 mod test {
-    use crate::analytics::hash::create_from_init;
-    use rand::{thread_rng, Rng, RngCore};
     use std::collections::HashSet;
     use std::net::IpAddr;
+
+    use rand::{Rng, RngCore, thread_rng};
+
+    use crate::analytics::hash::create_from_init;
 
     #[test]
     fn test_conflicts() {
@@ -141,6 +157,7 @@ mod test {
         let len = thread_rng().gen_range(0..128);
         (0..len).map(|_| random_byte()).collect()
     }
+
     fn random_byte() -> u8 {
         thread_rng().gen_range(0..=255)
     }
