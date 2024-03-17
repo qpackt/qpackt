@@ -3,45 +3,48 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Qpackt :: Ramblings About Software Engineering</title>
     <link href="tailwind.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100">
+<script src="/qpackt/event/send_event.js"></script>
 <nav class="bg-gray-800 py-4">
     <div class="container mx-auto flex justify-between items-center">
         <div>
-            <a href="index.html" class="text-white text-lg font-bold">Qpackt</a>
+            <a class="text-white text-lg font-bold" href="index.html">Qpackt</a>
         </div>
         <div class="hidden md:block" style="margin: 10px">
             <ul class="flex space-x-4">
-                <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-                <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-                <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-                <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-                <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+                <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+                <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+                <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+                <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+                <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+                    code</a></li>
             </ul>
         </div>
         <div class="md:hidden">
-            <button id="menu-toggle" class="text-white focus:outline-none">
+            <button class="text-white focus:outline-none" id="menu-toggle">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                      xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M4 6h16M4 12h16M4 18h16"></path>
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"></path>
                 </svg>
             </button>
         </div>
     </div>
 </nav>
 
-<div id="menu" class="hidden md:hidden bg-gray-800 py-4">
+<div class="hidden md:hidden bg-gray-800 py-4" id="menu">
     <ul class="flex flex-col space-y-2">
-        <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-        <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-        <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-        <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-        <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+        <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+        <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+        <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+        <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+        <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+            code</a></li>
     </ul>
 </div>
 
@@ -61,7 +64,7 @@
         <p class="text-gray-800 leading-relaxed">
             Don't shoot for the stars to get to the moon. Instead, fix this pothole right in front of you.
         </p>
-        <a href="1-percent-better-every-day.html" class="underline">Continued...</a>
+        <a class="underline" href="1-percent-better-every-day.html">Continued...</a>
     </div>
 
     <div class="max-w-lg mx-auto mt-8">
@@ -69,17 +72,31 @@
         <p class="text-gray-800 leading-relaxed">
             Improving your tests one mutant at a time (and fighting spurious line coverage).
         </p>
-        <a href="mutation-testing-in-rust.html" class="underline">Continued...</a>
+        <a class="underline" href="mutation-testing-in-rust.html">Continued...</a>
     </div>
 
     <div class="max-w-lg mx-auto mt-8">
-        <a href="testing-qpackt-with-cargo-mutants.html"><h2 class="text-3xl font-bold mb-4">Using mutants to find weak spots in Qpackt. Part #1</h2></a>
+        <a href="testing-qpackt-with-cargo-mutants.html"><h2 class="text-3xl font-bold mb-4">Using mutants to find weak
+            spots in Qpackt. Part #1</h2></a>
         <p class="text-gray-800 leading-relaxed">
             It's too late for TDD, what now?
         </p>
-        <a href="testing-qpackt-with-cargo-mutants.html" class="underline">Continued...</a>
+        <a class="underline" href="testing-qpackt-with-cargo-mutants.html">Continued...</a>
     </div>
 </div>
 </body>
+<script lang="js">
+    let time = 0;
 
+    function myEventFunction() {
+        if (time < 60) {
+            sendEvent(`TIME_ON_PAGE_${time}`, {time: time}, 0)
+            setTimeout(() => myEventFunction(), 1000)
+            time++
+        }
+    }
+
+    myEventFunction()
+
+</script>
 </html>

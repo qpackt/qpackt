@@ -3,45 +3,48 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Qpackt :: Ramblings About Software Engineering</title>
     <link href="tailwind.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100">
+<script src="/qpackt/event/send_event.js"></script>
 <nav class="bg-gray-800 py-4">
     <div class="container mx-auto flex justify-between items-center">
         <div>
-            <a href="index.html" class="text-white text-lg font-bold">Qpackt</a>
+            <a class="text-white text-lg font-bold" href="index.html">Qpackt</a>
         </div>
         <div class="hidden md:block" style="margin: 10px">
             <ul class="flex space-x-4">
-                <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-                <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-                <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-                <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-                <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+                <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+                <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+                <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+                <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+                <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+                    code</a></li>
             </ul>
         </div>
         <div class="md:hidden">
-            <button id="menu-toggle" class="text-white focus:outline-none">
+            <button class="text-white focus:outline-none" id="menu-toggle">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                      xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M4 6h16M4 12h16M4 18h16"></path>
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"></path>
                 </svg>
             </button>
         </div>
     </div>
 </nav>
 
-<div id="menu" class="hidden md:hidden bg-gray-800 py-4">
+<div class="hidden md:hidden bg-gray-800 py-4" id="menu">
     <ul class="flex flex-col space-y-2">
-        <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-        <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-        <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-        <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-        <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+        <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+        <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+        <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+        <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+        <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+            code</a></li>
     </ul>
 </div>
 
@@ -53,7 +56,7 @@
         menu.classList.toggle('hidden');
     });
 </script>
-<div class="max-w-2xl mx-auto"  style="margin-bottom: 30px">
+<div class="max-w-2xl mx-auto" style="margin-bottom: 30px">
     <div style="margin: 30px"></div>
     <h1 class="text-2xl font-bold mb-4">Improving your tests one mutant at a time</h1>
 
@@ -84,18 +87,25 @@ fn test() {
     </code>
     </pre>
     <p class="mb-4" style="margin-top: 10px">
-        Admittedly, the test isn't very good. It only tests whether the found value is not None. You may laugh, but I've seen something similar at a large UK bank.
+        Admittedly, the test isn't very good. It only tests whether the found value is not None. You may laugh, but I've
+        seen something similar at a large UK bank.
     </p>
 
     <p class="mb-4" style="margin-top: 10px">
-        When we look at the implementation, you'll see there are many places where the programmer could make a mistake (in fact, there are some). And yet, the test passes. What's worse - the line coverage is 100%.
+        When we look at the implementation, you'll see there are many places where the programmer could make a mistake
+        (in fact, there are some). And yet, the test passes. What's worse - the line coverage is 100%.
     </p>
 
     <p class="mb-4" style="margin-top: 10px">
-        Mutation testing is about introducing small changes (potential mistakes a programmer could make) in the code and then checking whether they would be caught by tests. You could say that mutation testing checks how good your asserts are. It's not uncommon to have tests that run through code (so there is 'line coverage') with some of the tests hitting 'if condition-returning-true' line, but not a single test triggers 'if condition-returning-false'.
+        Mutation testing is about introducing small changes (potential mistakes a programmer could make) in the code and
+        then checking whether they would be caught by tests. You could say that mutation testing checks how good your
+        asserts are. It's not uncommon to have tests that run through code (so there is 'line coverage') with some of
+        the tests hitting 'if condition-returning-true' line, but not a single test triggers 'if
+        condition-returning-false'.
     </p>
     <p class="mb-4" style="margin-top: 10px">
-        In Rust, you can run mutation testing with 'cargo mutants' installed by 'cargo install cargo-mutants'. Then, you just run 'cargo mutants' (or 'cargo mutants -- --release' if you want to test the code in release mode).
+        In Rust, you can run mutation testing with 'cargo mutants' installed by 'cargo install cargo-mutants'. Then, you
+        just run 'cargo mutants' (or 'cargo mutants -- --release' if you want to test the code in release mode).
     </p>
     <p class="mb-4" style="margin-top: 10px">
         Let's see what mutations it can find in the above function:
@@ -114,10 +124,15 @@ MISSED   src/main.rs:5:5: replace largest_odd -> Option&lt;f32&gt; with Some(-1.
     </code>
     </pre>
     <p class="mb-4" style="margin-top: 10px">
-        So first of all, there are 9 potential mutants that could be found (some tools are better at this than others, for Java I highly recommend pitest.org - it's absolutely fantastic!). Two of them aren't viable (the exact meaning depends on the tool: it could be an infinite loop or some other issue with the generated code). We see that 7 mutations were tested and only 2 were caught.
+        So first of all, there are 9 potential mutants that could be found (some tools are better at this than others,
+        for Java I highly recommend pitest.org - it's absolutely fantastic!). Two of them aren't viable (the exact
+        meaning depends on the tool: it could be an infinite loop or some other issue with the generated code). We see
+        that 7 mutations were tested and only 2 were caught.
     </p>
     <p class="mb-4" style="margin-top: 10px">
-        Knowing that the function should return the largest odd number, we can immediately know what's wrong with our test by looking at the mutation 'Option&lt;f32&gt; with Some(0.0)'. It should never return Some(0.0)! But first, let's change this in the code:
+        Knowing that the function should return the largest odd number, we can immediately know what's wrong with our
+        test by looking at the mutation 'Option&lt;f32&gt; with Some(0.0)'. It should never return Some(0.0)! But first,
+        let's change this in the code:
     </p>
     <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
     <code class="text-sm text-gray-800">
@@ -194,10 +209,14 @@ MISSED   src/main.rs:7:28: replace && with || in largest_odd in 0.3s build + 0.1
     </code>
     </pre>
     <p class="mb-4" style="margin-top: 10px">
-        We see that the number of possible mutations went up (it will grow as the code becomes more complex). The test caught 5 mutations but 4 were missed. That's like 55% mutation coverage, not very good. From my experience, we should try to get around 70-80% mutations killed (higher than that and we'll end up testing silly things. But as always - it depends).
+        We see that the number of possible mutations went up (it will grow as the code becomes more complex). The test
+        caught 5 mutations but 4 were missed. That's like 55% mutation coverage, not very good. From my experience, we
+        should try to get around 70-80% mutations killed (higher than that and we'll end up testing silly things. But as
+        always - it depends).
     </p>
     <p class="mb-4" style="margin-top: 10px">
-        Interestingly, if we swap(!) the comparison (from > to <) the test still passes. Getting the comparison wrong would be potentially an expensive mistake to make! So let's test for this as well:
+        Interestingly, if we swap(!) the comparison (from > to <) the test still passes. Getting the comparison wrong
+        would be potentially an expensive mistake to make! So let's test for this as well:
     </p>
     <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
     <code class="text-sm text-gray-800">
@@ -211,7 +230,8 @@ fn test() {
     </pre>
 
     <p class="mb-4" style="margin-top: 10px">
-        And the test fails. Now we're getting to the bottom of this. Of course, the comparison should be '<' to be correct:
+        And the test fails. Now we're getting to the bottom of this. Of course, the comparison should be '<' to be
+        correct:
     </p>
     <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
     <code class="text-sm text-gray-800">
@@ -236,7 +256,9 @@ MISSED   src/main.rs:7:70: replace < with == in largest_odd in 0.3s build + 0.1s
     </code>
     </pre>
     <p class="mb-4" style="margin-top: 10px">
-        That's right. If we replace the comparison with '==' the test will not catch this! It happens because in our test the largest odd number is the first item in the vector. Put at the end and the test (with == ) fails. Let's test for more numbers:
+        That's right. If we replace the comparison with '==' the test will not catch this! It happens because in our
+        test the largest odd number is the first item in the vector. Put at the end and the test (with == ) fails. Let's
+        test for more numbers:
     </p>
     <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
     <code class="text-sm text-gray-800">
@@ -283,10 +305,12 @@ if largest.is_none() || largest.unwrap() < *n {
     </pre>
 
     <p class="mb-4" style="margin-top: 10px">
-        That's right. The test passes in all three implementations. If the test says it doesn't matter - maybe we shouldn't be doing this? But of course we know we need this, so we need to fix the test.
+        That's right. The test passes in all three implementations. If the test says it doesn't matter - maybe we
+        shouldn't be doing this? But of course we know we need this, so we need to fix the test.
     </p>
     <p class="mb-4" style="margin-top: 10px">
-        So wait. Why does the test pass without this check? Well, in our test, the largest number is odd! So let's add an even number that's larger than 5.0:
+        So wait. Why does the test pass without this check? Well, in our test, the largest number is odd! So let's add
+        an even number that's larger than 5.0:
     </p>
     <pre class="bg-gray-300 p-4 rounded-md overflow-x-auto">
     <code class="text-sm text-gray-800">
@@ -311,19 +335,41 @@ Auto-set test timeout to 20s
     </code>
     </pre>
     <p class="mb-4" style="margin-top: 10px">
-        And so we got to 100% mutation coverage. (There is still is a small problem present - we don't test for None value. It just shows that no tool alone is perfect.)
+        And so we got to 100% mutation coverage. (There is still is a small problem present - we don't test for None
+        value. It just shows that no tool alone is perfect.)
     </p>
     <p class="mb-4" style="margin-top: 10px">
-        In real software, it's not so simple. Sometimes it's quite a challenge to get to 60% mutation coverage and... the software still works. Business doesn't care (rightly!) about your mutation coverage. At some point, the benefit of killing more mutations is smaller than the effort spent (especially when there are other tests not run by 'cargo mutants'). But mutation testing is quite a good tool to discover error-prone code (it will have more places that can be mutated). I also see it as a tool to get developers familiar with a new code base (they need to go deep one feature at a time).
+        In real software, it's not so simple. Sometimes it's quite a challenge to get to 60% mutation coverage and...
+        the software still works. Business doesn't care (rightly!) about your mutation coverage. At some point, the
+        benefit of killing more mutations is smaller than the effort spent (especially when there are other tests not
+        run by 'cargo mutants'). But mutation testing is quite a good tool to discover error-prone code (it will have
+        more places that can be mutated). I also see it as a tool to get developers familiar with a new code base (they
+        need to go deep one feature at a time).
     </p>
     <p class="mb-4" style="margin-top: 10px">
-        In Qpackt, I don't really practice TDD. Instead, I look at mutation and think: what feature wouldn't work had I made this mistake. Then I just implement a test checking for this feature. This usually kills more mutations than I initially hoped for and tests real features instead of functions. I wrote more about Qpackt mutation testing <a href="testing-qpackt-with-cargo-mutants.html" class="underline">here</a>.
+        In Qpackt, I don't really practice TDD. Instead, I look at mutation and think: what feature wouldn't work had I
+        made this mistake. Then I just implement a test checking for this feature. This usually kills more mutations
+        than I initially hoped for and tests real features instead of functions. I wrote more about Qpackt mutation
+        testing <a class="underline" href="testing-qpackt-with-cargo-mutants.html">here</a>.
     </p>
     <p>
-        <a href="blog.html" class="underline">Back to blog</a>
+        <a class="underline" href="blog.html">Back to blog</a>
     </p>
 
 </div>
 </body>
+<script lang="js">
+    let time = 0;
 
+    function myEventFunction() {
+        if (time < 60) {
+            sendEvent(`TIME_ON_PAGE_${time}`, {time: time}, 0)
+            setTimeout(() => myEventFunction(), 1000)
+            time++
+        }
+    }
+
+    myEventFunction()
+
+</script>
 </html>

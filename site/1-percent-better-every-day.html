@@ -3,45 +3,48 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Qpackt :: Ramblings About Software Engineering</title>
     <link href="tailwind.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100">
+<script src="/qpackt/event/send_event.js"></script>
 <nav class="bg-gray-800 py-4">
     <div class="container mx-auto flex justify-between items-center">
         <div>
-            <a href="index.html" class="text-white text-lg font-bold">Qpackt</a>
+            <a class="text-white text-lg font-bold" href="index.html">Qpackt</a>
         </div>
         <div class="hidden md:block" style="margin: 10px">
             <ul class="flex space-x-4">
-                <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-                <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-                <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-                <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-                <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+                <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+                <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+                <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+                <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+                <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+                    code</a></li>
             </ul>
         </div>
         <div class="md:hidden">
-            <button id="menu-toggle" class="text-white focus:outline-none">
+            <button class="text-white focus:outline-none" id="menu-toggle">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                      xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M4 6h16M4 12h16M4 18h16"></path>
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"></path>
                 </svg>
             </button>
         </div>
     </div>
 </nav>
 
-<div id="menu" class="hidden md:hidden bg-gray-800 py-4">
+<div class="hidden md:hidden bg-gray-800 py-4" id="menu">
     <ul class="flex flex-col space-y-2">
-        <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-        <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-        <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-        <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-        <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+        <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+        <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+        <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+        <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+        <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+            code</a></li>
     </ul>
 </div>
 
@@ -60,25 +63,46 @@
     <p class="text-lg" style="margin: 10px">1.01<sup class="text-sm">365</sup> = 37.8</p>
     <p class="mb-4">
         It's simple: <span class="font-mono">1.01</span> means improving something by 1%.
-        <span class="font-mono">365</span> means doing this every day for a year. So, in other words, if you improve something by 1% every day, in one year, it will be 37.8 times better.
+        <span class="font-mono">365</span> means doing this every day for a year. So, in other words, if you improve
+        something by 1% every day, in one year, it will be 37.8 times better.
     </p>
     <p class="mb-4">
-    Of course, working on something every single day of the year is hard. But even working only on weekdays:
+        Of course, working on something every single day of the year is hard. But even working only on weekdays:
     </p>
     <p class="text-lg" style="margin: 10px">1.01<sup class="text-sm">250</sup> = 12</p>
     <p class="mb-4">
         Makes the thing 12 times better within a year.
     </p>
     <p class="mb-4">
-        So I'm not shooting for the stars to get to the moon; instead, I'm looking to improve the next small thing right in front of me. Of course, sometimes it's hard to identify what needs to be done, but it could be anything. For software, it could be another test, another piece of documentation, another small feature, or some performance fix.
+        So I'm not shooting for the stars to get to the moon; instead, I'm looking to improve the next small thing right
+        in front of me. Of course, sometimes it's hard to identify what needs to be done, but it could be anything. For
+        software, it could be another test, another piece of documentation, another small feature, or some performance
+        fix.
     </p>
     <p class="mb-4">
-        That's my plan for Qpackt. It will be going slowly, but hopefully steadily. Hence, I'm very keen on receiving feedback. If Qpackt almost suits your needs, <a href="https://github.com/qpackt/qpackt/issues" target="_blank" class="underline">let me know</a>. Implementing the missing feature can be easier than you think, and I'm probably not going to do it without anyone asking. Right now, Qpackt does all that I need, but it has the potential to be much more.
+        That's my plan for Qpackt. It will be going slowly, but hopefully steadily. Hence, I'm very keen on receiving
+        feedback. If Qpackt almost suits your needs, <a class="underline" href="https://github.com/qpackt/qpackt/issues"
+                                                        target="_blank">let me know</a>. Implementing the missing
+        feature can be easier than you think, and I'm probably not going to do it without anyone asking. Right now,
+        Qpackt does all that I need, but it has the potential to be much more.
     </p>
     <p>
-        <a href="blog.html" class="underline">Back to blog</a>
+        <a class="underline" href="blog.html">Back to blog</a>
     </p>
 </div>
 </body>
+<script lang="js">
+    let time = 0;
 
+    function myEventFunction() {
+        if (time < 60) {
+            sendEvent(`TIME_ON_PAGE_${time}`, {time: time}, 0)
+            setTimeout(() => myEventFunction(), 1000)
+            time++
+        }
+    }
+
+    myEventFunction()
+
+</script>
 </html>

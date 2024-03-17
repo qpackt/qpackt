@@ -3,45 +3,48 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Qpackt :: A/B Testing</title>
     <link href="tailwind.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-gray-100">
+<script src="/qpackt/event/send_event.js"></script>
 <nav class="bg-gray-800 py-4">
     <div class="container mx-auto flex justify-between items-center">
         <div>
-            <a href="index.html" class="text-white text-lg font-bold">Qpackt</a>
+            <a class="text-white text-lg font-bold" href="index.html">Qpackt</a>
         </div>
         <div class="hidden md:block" style="margin: 10px">
             <ul class="flex space-x-4">
-                <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-                <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-                <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-                <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-                <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+                <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+                <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+                <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+                <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+                <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+                    code</a></li>
             </ul>
         </div>
         <div class="md:hidden">
-            <button id="menu-toggle" class="text-white focus:outline-none">
+            <button class="text-white focus:outline-none" id="menu-toggle">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                      xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M4 6h16M4 12h16M4 18h16"></path>
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"></path>
                 </svg>
             </button>
         </div>
     </div>
 </nav>
 
-<div id="menu" class="hidden md:hidden bg-gray-800 py-4">
+<div class="hidden md:hidden bg-gray-800 py-4" id="menu">
     <ul class="flex flex-col space-y-2">
-        <li><a href="index.html" class="text-white hover:text-gray-300">Home</a></li>
-        <li><a href="blog.html" class="text-white hover:text-gray-300">Blog</a></li>
-        <li><a href="roadmap.html" class="text-white hover:text-gray-300">Roadmap</a></li>
-        <li><a href="ab-testing.html" class="text-white hover:text-gray-300">A/B testing</a></li>
-        <li><a href="https://github.com/qpackt/qpackt" class="text-white hover:text-gray-300" target="_blank">Source code</a></li>
+        <li><a class="text-white hover:text-gray-300" href="index.html">Home</a></li>
+        <li><a class="text-white hover:text-gray-300" href="blog.html">Blog</a></li>
+        <li><a class="text-white hover:text-gray-300" href="roadmap.html">Roadmap</a></li>
+        <li><a class="text-white hover:text-gray-300" href="ab-testing.html">A/B testing</a></li>
+        <li><a class="text-white hover:text-gray-300" href="https://github.com/qpackt/qpackt" target="_blank">Source
+            code</a></li>
     </ul>
 </div>
 
@@ -61,52 +64,85 @@
     <p class="mb-4">Serving multiple versions of the same site can be useful for various reasons:</p>
 
     <ul class="list-disc pl-6 mb-6">
-        <li><strong>A/B testing:</strong> Split your visits into two different versions and compare their engagement. For example, some people prefer reading longer text while others prefer viewing images. Some like a light and minimalistic look, while others prefer dark mode.</li>
-        <li><strong>Splitting traffic by source:</strong> When you share a link to your website, you can add a URL parameter like "www.site.com/?source=ad" or "www.site.com/?source=forum". This allows you to compare user engagement and conversions based on the referral source.</li>
-        <li><strong>Preventing broken link errors:</strong> When you want to upload a new version of your site, some visitors may still have the old version open in their browsers. You don't want to lose them when they click on a link that no longer exists in the new version. Instead, you can smoothly transition new users to the updated version while still serving the old version to current users. Once everyone has switched over to the new version, you can safely delete the old one. This is especially important for Single Page Applications (such as Angular, Vue, etc.) where page elements are often loaded lazily, as a broken link can result in an unpleasant error message for the user.</li>
+        <li><strong>A/B testing:</strong> Split your visits into two different versions and compare their engagement.
+            For example, some people prefer reading longer text while others prefer viewing images. Some like a light
+            and minimalistic look, while others prefer dark mode.
+        </li>
+        <li><strong>Splitting traffic by source:</strong> When you share a link to your website, you can add a URL
+            parameter like "www.site.com/?source=ad" or "www.site.com/?source=forum". This allows you to compare user
+            engagement and conversions based on the referral source.
+        </li>
+        <li><strong>Preventing broken link errors:</strong> When you want to upload a new version of your site, some
+            visitors may still have the old version open in their browsers. You don't want to lose them when they click
+            on a link that no longer exists in the new version. Instead, you can smoothly transition new users to the
+            updated version while still serving the old version to current users. Once everyone has switched over to the
+            new version, you can safely delete the old one. This is especially important for Single Page Applications
+            (such as Angular, Vue, etc.) where page elements are often loaded lazily, as a broken link can result in an
+            unpleasant error message for the user.
+        </li>
     </ul>
 
     <h2 class="text-xl font-bold mb-4">Uploading versions of your site</h2>
 
     <p class="mb-4">
-        <img src="new.png" alt="No site versions installed" class="w-full rounded-lg mb-4"/>
+        <img alt="No site versions installed" class="w-full rounded-lg mb-4" src="new.png"/>
     </p>
 
-    <p class="mb-4">Before doing anything, you need to upload one or more versions. You can upload the same version multiple times. Click "Choose", select the zipped website folder and click "Upload".</p>
+    <p class="mb-4">Before doing anything, you need to upload one or more versions. You can upload the same version
+        multiple times. Click "Choose", select the zipped website folder and click "Upload".</p>
 
     <p class="mb-4">
-        <img src="fresh_upload.png" alt="Fresh Upload" class="w-full rounded-lg mb-4"/>
+        <img alt="Fresh Upload" class="w-full rounded-lg mb-4" src="fresh_upload.png"/>
     </p>
 
     <h2 class="text-xl font-bold mb-4">A/B testing</h2>
 
-    <p class="mb-4">For A/B testing, select 'Weight' and assign some numbers. If you want traffic to be split equally, then make all numbers the same. If you want 10% traffic to go to one version and 90% traffic go to the other, give them numbers like 1 and 9, or 10 and 90. Don't forget to click 'Update' when done.</p>
+    <p class="mb-4">For A/B testing, select 'Weight' and assign some numbers. If you want traffic to be split equally,
+        then make all numbers the same. If you want 10% traffic to go to one version and 90% traffic go to the other,
+        give them numbers like 1 and 9, or 10 and 90. Don't forget to click 'Update' when done.</p>
 
     <p class="mb-4">
-        <img src="weight.png" alt="Weight" class="w-full rounded-lg mb-4"/>
+        <img alt="Weight" class="w-full rounded-lg mb-4" src="weight.png"/>
     </p>
 
     <h2 class="text-xl font-bold mb-4">Rolling a new version</h2>
 
-    <p class="mb-4">Getting users off the old version is done by assigning 0 weight to the old version, and any higher number to the new one.</p>
+    <p class="mb-4">Getting users off the old version is done by assigning 0 weight to the old version, and any higher
+        number to the new one.</p>
 
     <p class="mb-4">
-        <img src="roll_new.png" alt="Rolling New Version" class="w-full rounded-lg mb-4"/>
+        <img alt="Rolling New Version" class="w-full rounded-lg mb-4" src="roll_new.png"/>
     </p>
 
-    <p class="mb-4">This way all new users will be directed to the new version and the old version can be deleted after a while.</p>
+    <p class="mb-4">This way all new users will be directed to the new version and the old version can be deleted after
+        a while.</p>
 
     <h2 class="text-xl font-bold mb-4">Split by traffic source</h2>
 
-    <p class="mb-4">Imagine you're running an ad campaign and also wrote about your site on some forum. You want to see the difference between users' behavior coming from different places.</p>
+    <p class="mb-4">Imagine you're running an ad campaign and also wrote about your site on some forum. You want to see
+        the difference between users' behavior coming from different places.</p>
 
     <p class="mb-4">
-        <img src="url.png" alt="URL Parameters" class="w-full rounded-lg mb-4"/>
+        <img alt="URL Parameters" class="w-full rounded-lg mb-4" src="url.png"/>
     </p>
 
-    <p>Version 2024_02_15__09_24_32 is there to handle traffic without any URL parameters. Other versions will handle traffic from specific sources.</p>
+    <p>Version 2024_02_15__09_24_32 is there to handle traffic without any URL parameters. Other versions will handle
+        traffic from specific sources.</p>
 
 </div>
 </body>
+<script lang="js">
+    let time = 0;
 
+    function myEventFunction() {
+        if (time < 60) {
+            sendEvent(`TIME_ON_PAGE_${time}`, {time: time}, 0)
+            setTimeout(() => myEventFunction(), 1000)
+            time++
+        }
+    }
+
+    myEventFunction()
+
+</script>
 </html>
