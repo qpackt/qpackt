@@ -140,7 +140,7 @@ impl Dao {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Serialize, Ord, PartialOrd)]
 pub(crate) struct EventName(Arc<str>);
 
 impl From<String> for EventName {

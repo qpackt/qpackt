@@ -78,6 +78,7 @@ pub(crate) async fn get_events_stats(http: HttpRequest, filter: web::Query<DateR
         }
         events_percent_list.push(epc);
     }
+    events_percent_list.sort_by(|e1, e2| e1.event.cmp(&e2.event));
     let stats = EventsStats {
         events_percent_list,
     };
