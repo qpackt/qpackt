@@ -54,4 +54,21 @@ export const http = {
         return await this.axiosInstance.delete(endpoint, config)
     },
 
+    async downloadCsv(url, filename) {
+        const config = this.getConfig();
+        config.responseType = 'blob';
+        axios.get(url, config)
+            .then(response => {
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', filename);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+    }
 }

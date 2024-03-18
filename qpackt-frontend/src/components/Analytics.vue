@@ -62,9 +62,19 @@ async function fetchAnalytics() {
       stats: r.data.versions_stats,
     })
   })
-  http.get(`/events/stats?time_from=${request.from_time}&time_to=${request.to_time}`).then(r => {
+  http.get(`/events/stats?from_time=${request.from_time}&to_time=${request.to_time}`).then(r => {
     setEventsResults(r.data)
   })
+}
+
+async function downloadEvents() {
+  let request = {
+    from_time: dateStart.value.toJSON(),
+    to_time: dateEnd.value.toJSON()
+  }
+  const csvUrl = `/events/csv?from_time=${request.from_time}&to_time=${request.to_time}`
+  const filename = 'events.csv'
+  await http.downloadCsv(csvUrl, filename)
 }
 
 onMounted(() => loadAnalytics())
@@ -99,6 +109,8 @@ onMounted(() => loadAnalytics())
       <Column field="bounce_rate" header="Bounce rate"></Column>
     </DataTable>
   </Panel>
+  <div style="padding: 10px"></div>
+  <Button @click="downloadEvents">Download events</Button>
   <div v-for="item in analytics.events.events_percent_list">
     <div style="padding: 10px"></div>
     <Panel>

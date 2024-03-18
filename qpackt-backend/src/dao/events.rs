@@ -70,7 +70,7 @@ impl Dao {
                 .bind(event.name)
                 .bind(event.params)
                 .bind(event.path)
-                .bind(serde_json::to_string(&event.payload).unwrap());
+                .bind(event.payload);
             q.execute(&mut conn).await.map_err(|e| QpacktError::DatabaseError(e.to_string()))?;
         }
         info!("Saved {} events", len);

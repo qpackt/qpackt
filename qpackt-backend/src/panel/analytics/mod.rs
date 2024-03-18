@@ -36,9 +36,9 @@ pub(crate) mod events;
 const BOUNCE_VISIT_MAX_LENGTH: u64 = 5;
 
 #[derive(Deserialize)]
-pub(super) struct AnalyticsRequest {
-    from_time: DateTime<Utc>,
-    to_time: DateTime<Utc>,
+pub(super) struct DateRange {
+    pub(super) from_time: DateTime<Utc>,
+    pub(super) to_time: DateTime<Utc>,
 }
 
 #[derive(Serialize)]
@@ -57,7 +57,7 @@ struct VersionStats {
     visit_count: usize,
 }
 
-pub(crate) async fn get_analytics(http_request: HttpRequest, request: Json<AnalyticsRequest>, dao: Data<Dao>) -> Result<impl Responder> {
+pub(crate) async fn get_analytics(http_request: HttpRequest, request: Json<DateRange>, dao: Data<Dao>) -> Result<impl Responder> {
     validate_permission(&http_request)?;
     let from = request.from_time.timestamp() as u64;
     let to = request.to_time.timestamp() as u64;

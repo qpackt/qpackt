@@ -25,10 +25,10 @@ use std::time::Duration;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use actix_web::http::StatusCode;
 use actix_web::web::{Bytes, Data, Json};
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 use futures::Stream;
 use log::{error, warn};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::mpsc::error::TrySendError;
 use tokio::time::sleep;
@@ -38,6 +38,7 @@ use crate::dao::events::{EventName, GetEventsFilter, SavedEventData};
 use crate::dao::version::VersionName;
 use crate::error::QpacktError;
 use crate::error::Result;
+use crate::panel::analytics::DateRange;
 use crate::panel::validate_permission;
 
 #[derive(Serialize)]
@@ -63,15 +64,10 @@ pub(crate) struct EventsStats {
     events_percent_list: Vec<EventPercentCounts>,
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct Dupa {
-    time_from: DateTime<Utc>,
-    time_to: DateTime<Utc>,
-}
 
-pub(crate) async fn get_events_stats(http: HttpRequest, filter: web::Query<Dupa>, dao: Data<Dao>) -> Result<impl Responder> {
+pub(crate) async fn get_events_stats(http: HttpRequest, filter: web::Query<DateRange>, dao: Data<Dao>) -> Result<impl Responder> {
     validate_permission(&http)?;
-    let stats = dao.get_events_stats(GetEventsFilter { time_from: filter.time_from.timestamp() as u64, time_to: filter.time_to.timestamp() as u64 }).await?;
+    let stats = dao.get_events_stats(GetEventsFilter { time_from: filter.from_time.timestamp() as u64, time_to: filter.to_time.timestamp() as u64 }).await?;
     let version_visit_counts = stats.total_visit_count.into_iter().map(|(version, count)| VersionVisitCount { version, count }).collect::<Vec<_>>();
     let mut events_percent_list = Vec::with_capacity(stats.event_version_count.len());
     for (event, count_map) in stats.event_version_count {
@@ -88,13 +84,14 @@ pub(crate) async fn get_events_stats(http: HttpRequest, filter: web::Query<Dupa>
     Ok(Json(stats))
 }
 
-pub(crate) async fn get_events_csv(http: HttpRequest, filter: web::Query<GetEventsFilter>, dao: Data<Dao>) -> Result<impl Responder> {
+pub(crate) async fn get_events_csv(http: HttpRequest, filter: web::Query<DateRange>, dao: Data<Dao>) -> Result<impl Responder> {
     validate_permission(&http)?;
     let mut response = HttpResponse::build(StatusCode::OK);
     response.append_header(("Content-type", "text/csv"));
     response.append_header(("Content-disposition", "attachment; filename=events.csv"));
     let (response_sender, response_receiver) = channel(65536);
     let (dao_sender, dao_receiver) = channel(65536);
+    let filter = GetEventsFilter { time_from: filter.from_time.timestamp() as u64, time_to: filter.to_time.timestamp() as u64 };
     tokio::spawn(get_events_db(dao, filter, dao_sender));
     tokio::spawn(map_to_csv(dao_receiver, response_sender));
     let response_stream = ResponseStream { receiver: response_receiver };
@@ -102,8 +99,8 @@ pub(crate) async fn get_events_csv(http: HttpRequest, filter: web::Query<GetEven
 }
 
 
-async fn get_events_db(dao: Data<Dao>, filter: web::Query<GetEventsFilter>, dao_sender: Sender<SavedEventData>) {
-    if let Err(e) = dao.get_events(filter.into_inner(), dao_sender).await {
+async fn get_events_db(dao: Data<Dao>, filter: GetEventsFilter, dao_sender: Sender<SavedEventData>) {
+    if let Err(e) = dao.get_events(filter, dao_sender).await {
         error!("Unable to get events from db: {}", e);
     }
 }
@@ -111,12 +108,12 @@ async fn get_events_db(dao: Data<Dao>, filter: web::Query<GetEventsFilter>, dao_
 type ResponseItem = std::result::Result<Bytes, QpacktError>;
 
 async fn map_to_csv(mut dao_receiver: Receiver<SavedEventData>, response_sender: Sender<ResponseItem>) {
-    let line = "id,time,event,version,visitor,params,path,payload\n\r";
+    let line = "id,time,event,version,visitor,params,path,payload\r\n";
     response_sender.send(Ok(Bytes::from(line))).await.unwrap();
     while let Some(event) = dao_receiver.recv().await {
         let time = DateTime::from_timestamp(event.event.time as i64, 0).unwrap();
         let time = time.format("%Y-%m-%d %H:%M");
-        let line = format!("{},{},{},{},{},{},{},{}\n\r",
+        let line = format!("{},{},{},{},{},{},{},{}\r\n",
                            event.id, time, event.event.name, event.event.version, event.event.visitor, event.event.params, event.event.path, event.event.payload
         );
         let mut m_bytes = Some(Ok(Bytes::from(line)));
