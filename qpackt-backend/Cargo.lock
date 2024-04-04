@@ -1765,7 +1765,7 @@ dependencies = [
 
 [[package]]
 name = "qpackt-backend"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "acme-lib",
  "actix-files",
