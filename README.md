@@ -11,8 +11,6 @@ Qpackt is a web server that makes life a bit easier:
 * GUI configuration
   Full feature list at https://qpackt.com/features.html
 
-If you're interested about future development, follow me on X (https://twitter.com/QPackt)
-
 ## Installation
 
 Currently, Qpackt is only available as source code. Installation isn't too difficult though and should take less than 10
